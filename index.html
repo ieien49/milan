@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Milano">
+<meta name="theme-color" content="#f6f6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Milano</title>
+<style>
+:root{--bg:#f6f6f3;--card:#fff;--tx:#1b1c1e;--mu:#6b6e73;--bd:#e4e4df;--ac:#1f7a4d;--ac2:#e8f3ec;--wa:#b26a00;--wa2:#fff3df;--er:#c0392b;--er2:#fdeceb}
+@media(prefers-color-scheme:dark){:root{--bg:#111214;--card:#1a1c1f;--tx:#ececec;--mu:#9a9da3;--bd:#2a2d31;--ac:#46c28a;--ac2:#18312a;--wa:#f0b04a;--wa2:#3a2d14;--er:#ff7b6b;--er2:#3a1e1b}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+#app{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 90px)}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em}
+.sub{color:var(--mu);font-size:14px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;margin:0 0 8px}
+.row{display:flex;gap:10px;align-items:flex-start}
+.row .grow{flex:1;min-width:0}
+.t{font-weight:600}.d{color:var(--mu);font-size:13px;margin-top:2px}
+.done .t{text-decoration:line-through;color:var(--mu)}
+.chip{display:inline-block;font-size:12px;border-radius:99px;padding:2px 8px;margin:4px 6px 0 0;background:var(--ac2);color:var(--ac)}
+.chip.w{background:var(--wa2);color:var(--wa)}.chip.e{background:var(--er2);color:var(--er)}
+input[type=checkbox]{width:24px;height:24px;margin:1px 0 0;accent-color:var(--ac);flex:none}
+input,select,button{font:inherit;color:inherit}
+input[type=text],input[type=date],select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);margin:0 0 8px}
+input[type=date]{min-height:42px}
+.btn{display:block;width:100%;padding:12px;border:0;border-radius:12px;background:var(--ac);color:#fff;font-weight:600;margin:0 0 8px}
+.btn.s{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+.btn.r{background:var(--er2);color:var(--er)}
+.x{background:none;border:0;color:var(--mu);font-size:20px;padding:0 4px;line-height:1}
+.dd{font-size:12px;padding:4px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);margin-top:6px;width:auto}
+.hero{background:var(--ac);color:#fff;border-radius:16px;padding:16px;margin:0 0 6px}
+.hero b{font-size:28px;display:block}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding:6px 6px calc(env(safe-area-inset-bottom) + 6px)}
+nav button{flex:1;background:none;border:0;padding:8px 2px;font-size:11px;color:var(--mu)}
+nav button span{display:block;font-size:20px}
+nav button.on{color:var(--ac);font-weight:600}
+a{color:var(--ac)}
+.tel{display:flex;justify-content:space-between;align-items:center;text-decoration:none;color:var(--tx)}
+.tel b{font-size:20px;color:var(--er)}
+label.l{display:block;font-size:13px;color:var(--mu);margin:0 0 3px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav id="nav"></nav>
+<input type="file" id="imp" accept="application/json,.json" hidden>
+<script>
+const KEY='milano-app-v1';
+const PH={avant:'Avant le départ',arrivee:'Arrivée (premières semaines)',pendant:'Pendant le semestre',depart:'Fin de semestre'};
+// rel: date de référence (arrival/departure), off: décalage en jours, v:1 = à vérifier auprès de Polimi/administration
+const TPL=[
+{id:'a1',phase:'avant',rel:'arrival',off:-45,v:1,title:'Learning Agreement validé et signé',d:"Signatures des 3 parties (toi, ton établissement, Polimi). Vérifie les délais avec ton service RI."},
+{id:'a2',phase:'avant',rel:'arrival',off:-30,title:'Convention de subvention Erasmus signée',d:"Grant agreement : conditions et calendrier des versements."},
+{id:'a3',phase:'avant',rel:'arrival',off:-30,v:1,title:'Demander la CEAM (carte européenne d\'assurance maladie)',d:"Demande sur ameli.fr. Prévoir ~2 semaines de délai. Vérifie sa couverture dans ton cas d'étudiant."},
+{id:'a4',phase:'avant',rel:'arrival',off:-30,v:1,title:'Contacter le bureau international de Polimi',d:"Procédure d'accueil, date de rentrée, documents à fournir à l'arrivée."},
+{id:'a5',phase:'avant',rel:'arrival',off:-21,title:'Assurance responsabilité civile / rapatriement',d:"Complément à la CEAM. Garde l'attestation dans le coffre."},
+{id:'a6',phase:'avant',rel:'arrival',off:-21,title:'Logement réservé, contrat signé',d:"Garde le contrat et les justificatifs de paiement dans le coffre."},
+{id:'a7',phase:'avant',rel:'arrival',off:-14,title:'Prévenir la banque / carte sans frais hors zone euro',d:"Plafonds de paiement et retrait pour 6 mois."},
+{id:'a8',phase:'avant',rel:'arrival',off:-14,title:'Billets d\'arrivée achetés',d:""},
+{id:'a9',phase:'avant',rel:'arrival',off:-7,title:'Scanner pièce d\'identité, CEAM, LA, assurance, contrat',d:"Enregistre-les dans l'app Fichiers (disponible hors ligne) et note l'emplacement dans le coffre."},
+{id:'b1',phase:'arrivee',rel:'arrival',off:3,v:1,title:'Certificate of arrival signé par Polimi',d:"À renvoyer à ton établissement d'origine pour déclencher la bourse."},
+{id:'b2',phase:'arrivee',rel:'arrival',off:3,title:'SIM / forfait italien',d:"Pense à la vérification d'identité (pièce d'identité exigée)."},
+{id:'b3',phase:'arrivee',rel:'arrival',off:3,title:'Abonnement ATM (transports Milan)',d:"Vérifie les tarifs étudiants / moins de 27 ans."},
+{id:'b4',phase:'arrivee',rel:'arrival',off:7,v:1,title:'Codice fiscale',d:"Agenzia delle Entrate ou via l'université. Souvent demandé pour le contrat, les abonnements, l'IBAN."},
+{id:'b5',phase:'arrivee',rel:'arrival',off:7,v:1,title:'Carte étudiante / immatriculation Polimi',d:""},
+{id:'b6',phase:'arrivee',rel:'arrival',off:14,v:1,title:'Contrat de location enregistré',d:"En Italie, le bail doit être enregistré (registrazione). Demande la preuve au propriétaire."},
+{id:'b7',phase:'arrivee',rel:'arrival',off:14,title:'Repérer pharmacie, médecin, urgences proches',d:"Note les adresses. Pas besoin de tout configurer, mais sache où aller."},
+{id:'b8',phase:'arrivee',rel:'arrival',off:14,title:'Compte bancaire italien (optionnel)',d:"Un IBAN italien est parfois exigé (loyer, certains services). Compare avec les frais de ta banque actuelle."},
+{id:'b9',phase:'arrivee',rel:'arrival',off:30,v:1,title:'Inscription à l\'anagrafe (séjour > 3 mois, citoyen UE)',d:"Obligation théorique, appliquée de façon variable. Demande au bureau international si c'est nécessaire dans ton cas."},
+{id:'c1',phase:'pendant',rel:'arrival',off:30,v:1,title:'Modifications du Learning Agreement (changement de cours)',d:"Délai fixé par ton établissement et par Polimi."},
+{id:'c2',phase:'pendant',rel:'arrival',off:30,v:1,title:'Vérifier le premier versement de la bourse',d:""},
+{id:'d1',phase:'depart',rel:'departure',off:-60,v:1,title:'Préavis au propriétaire',d:"Vérifie le délai exact dans ton contrat."},
+{id:'d2',phase:'depart',rel:'departure',off:-30,title:'Résilier électricité, gaz, internet',d:"Relevé de compteurs le dernier jour."},
+{id:'d3',phase:'depart',rel:'departure',off:-14,title:'Demander le Transcript of Records',d:""},
+{id:'d4',phase:'depart',rel:'departure',off:-14,title:'Clôturer / transférer le compte italien',d:""},
+{id:'d5',phase:'depart',rel:'departure',off:-7,v:1,title:'Certificate of departure signé',d:""},
+{id:'d6',phase:'depart',rel:'departure',off:-3,title:'État des lieux et restitution de la caution',d:""},
+{id:'d7',phase:'depart',rel:'departure',off:-1,title:'Exporter une sauvegarde de l\'app',d:"Réglages → Exporter (JSON)."},
+{id:'d8',phase:'depart',rel:'departure',off:14,v:1,title:'Rapport / questionnaire final Erasmus',d:"Dans les semaines suivant le retour. Vérifie le délai."}
+];
+const DOCT=['Pièce d\'identité','Passeport','CEAM','Assurance','Learning Agreement','Contrat de location','Abonnement ATM','Carte étudiante','Autre'];
+const EMERG=[['112','Numéro d\'urgence unique'],['118','Urgences médicales'],['113','Police'],['115','Pompiers']];
+const blank=()=>({settings:{arrival:'',departure:''},tasks:{},custom:[],docs:[]});
+let S=load(),tab='today';
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r)return Object.assign(blank(),r)}catch(e){}return blank()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Sauvegarde impossible. Exporte tes données.')}}
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const parse=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const today=()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate())};
+const diff=s=>Math.round((parse(s)-today())/864e5);
+const fmt=s=>parse(s).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function rel(s){const n=diff(s);if(n===0)return"aujourd'hui";if(n===1)return'demain';if(n===-1)return'hier';return n>0?'dans '+n+' j':'il y a '+Math.abs(n)+' j'}
+function dueOf(t){const o=(S.tasks[t.id]||{}).due;if(o)return o;const b=S.settings[t.rel];return b?iso(addD(parse(b),t.off)):''}
+function items(){
+ const o=[];
+ TPL.forEach(t=>{const st=S.tasks[t.id]||{};o.push({key:'task-'+t.id,kind:'task',id:t.id,title:t.title,due:dueOf(t),done:!!st.done,v:t.v})});
+ S.custom.forEach(c=>o.push({key:'c-'+c.id,kind:'custom',id:c.id,title:c.title,due:c.due||'',done:!!c.done}));
+ S.docs.forEach(d=>{if(d.expiry)o.push({key:'doc-'+d.id,kind:'doc',id:d.id,title:'Expiration : '+d.label,due:d.expiry,done:false})});
+ return o}
+function itemRow(i){
+ const late=i.due&&!i.done&&diff(i.due)<0;
+ const box=i.kind==='doc'?'<span style="width:24px;flex:none">📄</span>':`<input type="checkbox" data-a="toggle" data-k="${i.kind}" data-id="${i.id}" ${i.done?'checked':''}>`;
+ return `<div class="card row ${i.done?'done':''}">${box}<div class="grow"><div class="t">${esc(i.title)}</div>
+ ${i.due?`<span class="chip ${late?'e':''}">${fmt(i.due)} · ${rel(i.due)}</span>`:''}${i.v?'<span class="chip w">à vérifier</span>':''}</div>
+ ${i.kind==='custom'?`<button class="x" data-a="delcustom" data-id="${i.id}">×</button>`:''}</div>`}
+function vToday(){
+ const a=S.settings.arrival,dp=S.settings.departure;let hero='';
+ if(!a)hero='<div class="hero">Renseigne tes dates dans Réglages pour calculer toutes les échéances.</div>';
+ else{const n=diff(a);
+  if(n>0)hero=`<div class="hero"><b>J-${n}</b>avant l'arrivée à Milan (${fmt(a)})</div>`;
+  else if(dp&&diff(dp)>=0)hero=`<div class="hero"><b>${diff(dp)} jours</b>avant la fin du semestre (${fmt(dp)})</div>`;
+  else hero=`<div class="hero"><b>Jour ${1-n}</b>à Milan depuis le ${fmt(a)}</div>`}
+ const all=items().filter(i=>i.due&&!i.done).sort((x,y)=>x.due<y.due?-1:x.due>y.due?1:0);
+ const g=[['En retard',i=>diff(i.due)<0],['Cette semaine',i=>diff(i.due)>=0&&diff(i.due)<=7],['Ce mois-ci',i=>diff(i.due)>7&&diff(i.due)<=30],['Plus tard',i=>diff(i.due)>30]];
+ let h=`<h1>Milano</h1><p class="sub">${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</p>${hero}`;
+ g.forEach(([n,f])=>{const l=all.filter(f);if(l.length)h+=`<h2>${n} (${l.length})</h2>`+l.map(itemRow).join('')});
+ if(!all.length)h+='<p class="sub">Aucune échéance datée. Définis tes dates dans Réglages.</p>';
+ const sd=items().filter(i=>!i.due&&!i.done&&i.kind!=='doc').length;
+ if(sd&&!a)h+=`<p class="sub">${sd} tâches sans date (dates d'arrivée/départ manquantes).</p>`;
+ h+=`<h2>Ajouter une échéance</h2><div class="card"><input type="text" id="ct" placeholder="Ex : examen de Fisica"><input type="date" id="cd"><button class="btn" data-a="addcustom">Ajouter</button></div>`;
+ return h}
+function vCheck(){
+ let h='<h1>Démarches</h1><p class="sub">Les dates se calculent depuis tes dates d\'arrivée et de départ. « À vérifier » = confirme auprès de Polimi ou de l\'administration, je ne peux pas garantir ces points.</p>';
+ Object.keys(PH).forEach(p=>{
+  const l=TPL.filter(t=>t.phase===p),dn=l.filter(t=>(S.tasks[t.id]||{}).done).length;
+  h+=`<h2>${PH[p]} · ${dn}/${l.length}</h2>`;
+  l.forEach(t=>{const st=S.tasks[t.id]||{},due=dueOf(t),late=due&&!st.done&&diff(due)<0;
+   h+=`<div class="card row ${st.done?'done':''}"><input type="checkbox" data-a="toggle" data-k="task" data-id="${t.id}" ${st.done?'checked':''}>
+   <div class="grow"><div class="t">${esc(t.title)}</div>${t.d?`<div class="d">${esc(t.d)}</div>`:''}
+   ${t.v?'<span class="chip w">à vérifier</span>':''}${late?'<span class="chip e">en retard</span>':''}
+   <input type="date" class="dd" data-c="taskdue" data-id="${t.id}" value="${due}"></div></div>`})});
+ return h}
+function vDocs(){
+ let h='<h1>Coffre</h1><p class="sub">Suivi des documents et de leurs expirations. Ne saisis pas de numéros complets : garde les fichiers dans l\'app Fichiers/iCloud et note seulement leur emplacement.</p>';
+ const ds=[...S.docs].sort((a,b)=>(a.expiry||'9999')<(b.expiry||'9999')?-1:1);
+ ds.forEach(d=>{let ch='';if(d.expiry){const n=diff(d.expiry);ch=n<0?'<span class="chip e">Expiré</span>':n<60?`<span class="chip w">Expire dans ${n} j</span>`:`<span class="chip">Expire le ${fmt(d.expiry)}</span>`}
+  h+=`<div class="card row"><div class="grow"><div class="t">${esc(d.label)}</div><div class="d">${esc(d.type)}${d.loc?' · '+esc(d.loc):''}</div>${ch}</div><button class="x" data-a="deldoc" data-id="${d.id}">×</button></div>`});
+ if(!ds.length)h+='<p class="sub">Aucun document.</p>';
+ h+=`<h2>Ajouter</h2><div class="card"><select id="dt">${DOCT.map(t=>`<option>${esc(t)}</option>`).join('')}</select>
+ <input type="text" id="dl" placeholder="Nom (ex : CNI)"><label class="l">Date d'expiration (optionnel)</label><input type="date" id="de">
+ <input type="text" id="dloc" placeholder="Emplacement (ex : Fichiers > Italie > CNI.pdf)"><button class="btn" data-a="adddoc">Ajouter</button></div>`;
+ return h}
+function vSet(){
+ let h=`<h1>Réglages</h1><h2>Dates</h2><div class="card"><label class="l">Arrivée à Milan</label><input type="date" data-c="set" data-f="arrival" value="${S.settings.arrival||''}">
+ <label class="l">Fin du semestre / départ</label><input type="date" data-c="set" data-f="departure" value="${S.settings.departure||''}"></div>
+ <h2>Rappels iPhone</h2><div class="card"><p class="d" style="margin:0 0 8px">L'app ne peut pas t'envoyer de notifications. Exporte les échéances dans le Calendrier iOS, qui enverra les rappels. Réexporte après avoir changé des dates.</p>
+ <button class="btn" data-a="ics">Exporter vers le Calendrier (.ics)</button></div>
+ <h2>Données</h2><div class="card"><p class="d" style="margin:0 0 8px">Les données restent sur cet iPhone. Exporte une sauvegarde régulièrement.</p>
+ <button class="btn s" data-a="json">Exporter (JSON)</button><button class="btn s" data-a="imp">Importer (JSON)</button><button class="btn r" data-a="reset">Tout effacer</button></div>
+ <h2>Urgences en Italie</h2>`;
+ EMERG.forEach(([n,l])=>h+=`<a class="card tel" href="tel:${n}"><span>${l}</span><b>${n}</b></a>`);
+ h+='<p class="sub">Vérifie ces numéros avant ton départ.</p>';
+ return h}
+function render(){
+ const y=window.scrollY;
+ document.getElementById('app').innerHTML={today:vToday,check:vCheck,docs:vDocs,set:vSet}[tab]();
+ document.getElementById('nav').innerHTML=[['today','🗓','Aujourd\'hui'],['check','✅','Démarches'],['docs','🗂','Coffre'],['set','⚙️','Réglages']]
+  .map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><span>${i}</span>${l}</button>`).join('');
+ window.scrollTo(0,y)}
+async function outFile(name,text,mime){
+ const f=new File([text],name,{type:mime});
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return}catch(e){if(e.name==='AbortError')return}}
+ const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
+const icsEsc=s=>String(s).replace(/[\\;,]/g,m=>'\\'+m).replace(/\n/g,'\\n');
+function buildIcs(){
+ const st=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+ const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Milano App//FR','CALSCALE:GREGORIAN'];
+ items().filter(i=>i.due&&!i.done).forEach(i=>{
+  L.push('BEGIN:VEVENT','UID:'+i.key+'@milano-app','DTSTAMP:'+st,'DTSTART;VALUE=DATE:'+i.due.replace(/-/g,''),'DTEND;VALUE=DATE:'+iso(addD(parse(i.due),1)).replace(/-/g,''),
+  'SUMMARY:'+icsEsc(i.title),'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(i.title),'TRIGGER:-PT15H','END:VALARM','END:VEVENT')});
+ L.push('END:VCALENDAR');return L.join('\r\n')}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-a]');if(!b)return;
+ const a=b.dataset.a,id=b.dataset.id;
+ if(a==='tab'){tab=b.dataset.v;window.scrollTo(0,0);render();return}
+ if(a==='toggle')return; // géré par change
+ if(a==='addcustom'){const t=document.getElementById('ct').value.trim(),d=document.getElementById('cd').value;
+  if(!t){alert('Titre requis.');return}S.custom.push({id:uid(),title:t,due:d,done:false});save();render();return}
+ if(a==='delcustom'){S.custom=S.custom.filter(c=>c.id!==id);save();render();return}
+ if(a==='adddoc'){const l=document.getElementById('dl').value.trim();if(!l){alert('Nom requis.');return}
+  S.docs.push({id:uid(),type:document.getElementById('dt').value,label:l,expiry:document.getElementById('de').value,loc:document.getElementById('dloc').value.trim()});save();render();return}
+ if(a==='deldoc'){if(confirm('Supprimer ce document du coffre ?')){S.docs=S.docs.filter(d=>d.id!==id);save();render()}return}
+ if(a==='json'){outFile('milano-sauvegarde-'+iso(today())+'.json',JSON.stringify(S,null,1),'application/json');return}
+ if(a==='ics'){outFile('milano-echeances.ics',buildIcs(),'text/calendar');return}
+ if(a==='imp'){document.getElementById('imp').click();return}
+ if(a==='reset'){if(confirm('Tout effacer ? Cette action est définitive.')){S=blank();save();render()}return}
+});
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.dataset.a==='toggle'){const id=t.dataset.id;
+  if(t.dataset.k==='task'){S.tasks[id]=Object.assign({},S.tasks[id],{done:t.checked})}
+  else{const c=S.custom.find(x=>x.id===id);if(c)c.done=t.checked}
+  save();render();return}
+ if(t.dataset.c==='taskdue'){const id=t.dataset.id;const o=Object.assign({},S.tasks[id]);if(t.value)o.due=t.value;else delete o.due;S.tasks[id]=o;save();render();return}
+ if(t.dataset.c==='set'){S.settings[t.dataset.f]=t.value;save();render()}
+});
+document.getElementById('imp').addEventListener('change',e=>{
+ const f=e.target.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.settings||!Array.isArray(o.docs))throw 0;S=Object.assign(blank(),o);save();render();alert('Import réussi.')}catch(x){alert('Fichier invalide.')}};
+ r.readAsText(f);e.target.value=''});
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();
+</script>
+</body>
+</html>
