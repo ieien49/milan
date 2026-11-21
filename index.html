@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Milan">
+<meta name="theme-color" content="#1a1a2e">
+<title>Milan au Quotidien</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --bg: #1a1a2e;
+  --bg-card: #16213e;
+  --bg-card-hover: #1f2b47;
+  --text: #eaeaea;
+  --text-muted: #a0a0b0;
+  --accent: #4fc3f7;
+  --accent2: #81c784;
+  --danger: #ef5350;
+  --warning: #ffb74d;
+  --border: #2a2a4a;
+  --radius: 12px;
+  --nav-h: 64px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(26,26,46,0.95);
+  backdrop-filter: blur(10px);
+  padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top));
+  border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-bar {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-bar:focus { border-color: var(--accent); }
+.search-bar::placeholder { color: var(--text-muted); }
+
+/* Content */
+.content { padding: 16px; }
+
+.section { display: none; }
+.section.active { display: block; }
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  transition: background 0.2s;
+}
+.card:active { background: var(--bg-card-hover); }
+
+.card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--accent);
+}
+
+.card h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 10px 0 4px;
+  color: var(--text);
+}
+
+.card p, .card li {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.card ul { padding-left: 18px; }
+.card li { margin-bottom: 4px; }
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 2px 2px 2px 0;
+}
+.tag-blue { background: rgba(79,195,247,0.15); color: var(--accent); }
+.tag-green { background: rgba(129,199,132,0.15); color: var(--accent2); }
+.tag-orange { background: rgba(255,183,77,0.15); color: var(--warning); }
+.tag-red { background: rgba(239,83,80,0.15); color: var(--danger); }
+
+/* Favorite button */
+.fav-btn {
+  float: right;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s, transform 0.2s;
+  padding: 4px;
+}
+.fav-btn.active { opacity: 1; transform: scale(1.1); }
+
+/* Weather widget */
+.weather-widget {
+  background: linear-gradient(135deg, #1a237e, #283593);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.weather-widget .temp { font-size: 2.5rem; font-weight: 700; }
+.weather-widget .desc { font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-top: 4px; }
+.weather-widget .details { display: flex; justify-content: space-around; margin-top: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.7); }
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: rgba(22,33,62,0.98);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 200;
+}
+
+.nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: color 0.2s;
+  min-width: 60px;
+}
+.nav-btn .icon { font-size: 1.4rem; }
+.nav-btn.active { color: var(--accent); }
+
+/* Grid for nav (more than 5 items) */
+.nav-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: 100%;
+  gap: 2px;
+}
+
+/* Search results */
+.search-results {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  z-index: 300;
+  padding: 16px;
+  padding-top: calc(16px + env(safe-area-inset-top));
+  overflow-y: auto;
+  display: none;
+}
+.search-results.active { display: block; }
+.search-results .back-btn {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Checklist */
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+.checklist-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent2);
+}
+.checklist-item.done span { text-decoration: line-through; opacity: 0.5; }
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+th, td {
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+th { color: var(--accent); font-weight: 600; }
+td { color: var(--text-muted); }
+
+/* Sub-section tabs */
+.sub-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.sub-tab {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sub-tab.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+/* No results */
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+/* Accordion */
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.accordion-header .arrow { transition: transform 0.2s; }
+.accordion-header.open .arrow { transform: rotate(180deg); }
+.accordion-body {
+  display: none;
+  padding: 0 14px 14px;
+  background: var(--bg-card);
+  border-radius: 0 0 var(--radius) var(--radius);
+  margin-top: -8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-top: none;
+}
+.accordion-body.open { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>🇮🇹 Milan au Quotidien</h1>
+  <input type="text" class="search-bar" id="searchInput" placeholder="Rechercher (marché, pharmacie, M2...)" autocomplete="off">
+</div>
+
+<!-- Search Results Overlay -->
+<div class="search-results" id="searchResults">
+  <button class="back-btn" onclick="closeSearch()">✕ Fermer</button>
+  <div id="searchResultsList"></div>
+</div>
+
+<!-- Content -->
+<div class="content">
+
+<!-- ===== MODULE 1: TRANSPORT ===== -->
+<div class="section" id="sec-transport">
+  <h2 class="section-title">🚇 Transport & Déplacements</h2>
+
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="showSub(this,'metro')">Métro</button>
+    <button class="sub-tab" onclick="showSub(this,'bus')">Bus/Tram</button>
+    <button class="sub-tab" onclick="showSub(this,'bike')">BikeMi</button>
+    <button class="sub-tab" onclick="showSub(this,'gares')">Gares</button>
+  </div>
+
+  <div id="sub-metro">
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Métro Milan')">☆</button>
+      <h3>Lignes de métro</h3>
+      <table>
+        <tr><th>Ligne</th><th>Coloris</th><th>Extrémités</th><th>Stations clés</th></tr>
+        <tr><td>M1</td><td><span class="tag tag-red">Rouge</span></td><td>Robecchetto – Rho Fiera</td><td>Duomo, Centrale, Garibaldi</td></tr>
+        <tr><td>M2</td><td><span class="tag tag-green">Vert</span></td><td>Assago – Gessate</td><td>Duomo, Centrale, Cadorna</td></tr>
+        <tr><td>M3</td><td><span class="tag tag-orange">Jaune</span></td><td>San Donato – Rho Fiera</td><td>Duomo, Garibaldi, Rogoredo</td></tr>
+        <tr><td>M5</td><td><span class="tag tag-blue">Lilas</span></td><td>San Siro Stadio – Bignami</td><td>Lambrate, Porta Garibaldi</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Tarifs ATM')">☆</button>
+      <h3>Tarifs ATM (2025)</h3>
+      <ul>
+        <li><strong>Biglietto 10 min</strong> : 2,20 € (bus, tram, métro)</li>
+        <li><strong>Biglietto 75 min</strong> : 2,20 € (1 zone, tous transports)</li>
+        <li><strong>Giornaliero</strong> : 9,50 € (illimité 24h)</li>
+        <li><strong>Settimanale</strong> : 23 € (7 jours)</li>
+        <li><strong>Mensile</strong> : 43 € (30 jours)</li>
+      </ul>
+      <p style="margin-top:8px">📌 Acheter : distributeurs ATM en station, app ATM, tabaccheria</p>
+    </div>
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Correspondances clés')">☆</button>
+      <h3>Correspondances clés</h3>
+      <ul>
+        <li><strong>Duomo</strong> : M1 + M2 (centre-ville)</li>
+        <li><strong>Centrale</strong> : M1 + M2 (gare centrale)</li>
+        <li><strong>Porta Garibaldi</strong> : M2 + M3 + M5 (gare)</li>
+        <li><strong>Lambrate</strong> : M2 + M5 (nord-est)</li>
+        <li><strong>San Siro</strong> : M5 (stade)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="sub-bus" style="display:none">
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Bus et Tram Milan')">☆</button>
+      <h3>Lignes principales</h3>
+      <ul>
+        <li><strong>Bus 1</strong> : Duomo – Porta Romana</li>
+        <li><strong>Bus 2</strong> : Duomo – Sesto San Giovanni</li>
+        <li><strong>Bus 3</strong> : Duomo – Garbagnate</li>
+        <li><strong>Bus 5</strong> : Duomo – Lambrate</li>
+        <li><strong>Tram 1</strong> : Duomo – Monza (T1)</li>
+        <li><strong>Tram 2</strong> : Duomo – Sesto San Giovanni</li>
+        <li><strong>Tram 3</strong> : Duomo – Baggio</li>
+      </ul>
+      <p style="margin-top:8px">📌 Le tramway est le plus agréable pour traverser la ville. Préférez-le en été.</p>
+    </div>
+    <div class="card">
+      <h3>Horaires</h3>
+      <ul>
+        <li><strong>Métro</strong> : ~5h30 – 1h30 (tous les jours)</li>
+        <li><strong>Bus/Tram</strong> : ~5h – 1h (lignes principales)</li>
+        <li><strong>Nuit (N1-N6)</strong> : toutes les 30 min, 1h30 – 5h</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="sub-bike" style="display:none">
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'BikeMi')">☆</button>
+      <h3>BikeMi (vélos en libre-service)</h3>
+      <ul>
+        <li><strong>Tarif</strong> : 1er jour 3 €, ensuite 2 €/jour (illimité)</li>
+        <li><strong>Carte</strong> : à acheter en tabaccheria ou en ligne</li>
+        <li><strong>Stations</strong> : ~400 stations dans Milan</li>
+        <li><strong>App</strong> : "BikeMi" (Android/iOS)</li>
+      </ul>
+      <p style="margin-top:8px">📌 Zones principales : Duomo, Brera, Navigli, Isola, CityLife</p>
+    </div>
+    <div class="card">
+      <h3>Alternatives : vélos en libre-service électriques</h3>
+      <ul>
+        <li><strong>Lime</strong> : scooters et vélos, app dédiée</li>
+        <li><strong>Monriki</strong> : vélos électriques</li>
+        <li><strong>Velogreen</strong> : vélos électriques</li>
+      </ul>
+      <p style="margin-top:8px">📌 Piste cyclable le long du Naviglio Grande (Duomo → Gratosoglio) : très agréable.</p>
+    </div>
+  </div>
+
+  <div id="sub-gares" style="display:none">
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Gares Milan')">☆</button>
+      <h3>Gares principales</h3>
+      <table>
+        <tr><th>Gare</th><th>Position</th><th>Métro</th><th>Destinations</th></tr>
+        <tr><td>Centrale</td><td>Centre</td><td>M1, M2</td><td>TGV, InterCity, régionaux</td></tr>
+        <tr><td>Porta Garibaldi</td><td>Centre-Nord</td><td>M2, M3, M5</td><td>TGV, régionaux</td></tr>
+        <tr><td>Rogoredo</td><td>Sud</td><td>M3</td><td>TGV, régionaux</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Trains régionaux (Trenord)</h3>
+      <ul>
+        <li><strong>App</strong> : Trenord (horaires en temps réel)</li>
+        <li><strong>Carte 10 voyages</strong> : ~15 € (zone 1-2)</li>
+        <li><strong>Carte mensuelle</strong> : ~40 €</li>
+        <li><strong>Destinations populaires</strong> : Côme, Lac Majeur, Bergame, Varèse, Turin</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODULE 2: ALIMENTATION ===== -->
+<div class="section" id="sec-alimentation">
+  <h2 class="section-title">🛒 Alimentation & Marchés</h2>
+
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="showSub(this,'marches')">Marchés</button>
+    <button class="sub-tab" onclick="showSub(this,'super')">Supermarchés</button>
+    <button class="sub-tab" onclick="showSub(this,'artisans')">Artisans</button>
+    <button class="sub-tab" onclick="showSub(this,'repas')">Repas</button>
+  </div>
+
+  <div id="sub-marches">
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Marchés Milan')">☆</button>
+      <h3>Marchés couverts (tous les jours)</h3>
+      <table>
+        <tr><th>Marché</th><th>Quartier</th><th>Horaires</th><th>Spécialité</th></tr>
+        <tr><td>Ortolani</td><td>Brera</td><td>7h-14h</td><td>Fruits, légumes, fromages</td></tr>
+        <tr><td>Trambacchi</td><td>Lambrate</td><td>7h-14h</td><td>Viande, poisson</td></tr>
+        <tr><td>Porta Genova</td><td>Isola</td><td>7h-14h</td><td>Général, fleurs</td></tr>
+        <tr><td>San Marco</td><td>San Siro</td><td>7h-14h</td><td>Général</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Marchés plein air')">☆</button>
+      <h3>Marchés de plein air (jours spécifiques)</h3>
+      <table>
+        <tr><th>Marché</th><th>Jours</th><th>Quartier</th></tr>
+        <tr><td>Corso Vercelli</td><td>Lun, Mer, Ven</td><td>Isola / CityLife</td></tr>
+        <tr><td>Porta Ticinese</td><td>Mar, Jeu</td><td>Chiaravalle</td></tr>
+        <tr><td>Porta Romana</td><td>Mer, Sam</td><td>Forlanini</td></tr>
+        <tr><td>Porta Venezia</td><td>Lun, Jeu</td><td>Centrale</td></tr>
+        <tr><td>Foro Buonaparte</td><td>Mar, Ven</td><td>Duomo</td></tr>
+      </table>
+      <p style="margin-top:8px">📌 Les marchés de plein air ferment vers 14h-14h30.</p>
+    </div>
+  </div>
+
+  <div id="sub-super" style="display:none">
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Supermarchés Milan')">☆</button>
+      <h3>Supermarchés principaux</h3>
+      <table>
+        <tr><th>Chaîne</th><th>Positionnement</th><th>Horaires typiques</th></tr>
+        <tr><td>Coop</td><td>Moyen / Bio</td><td>8h-21h (dim 9h-19h)</td></tr>
+        <tr><td>Conad</td><td>Moyen</td><td>8h-21h</td></tr>
+        <tr><td>Lidl</td><td>Économique</td><td>8h-21h</td></tr>
+        <tr><td>Aldi</td><td>Économique</td><td>8h-21h</td></tr>
+        <tr><td>Eataly</td><td>Artisanal / Premium</td><td>9h-21h</td></tr>
+        <tr><td>Esselunga</td><td>Gros volumes</td><td>8h-21h (périphérie)</td></tr>
+      </table>
+      <p style="margin-top:8px">📌 <strong>Coop</strong> est le plus pratique en centre-ville. <strong>Eataly</strong> (via Torricelli) pour les produits italiens de qualité.</p>
+    </div>
+  </div>
+
+  <div id="sub-artisans" style="display:none">
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Artisans Milan')">☆</button>
+      <h3>Spécialistes de quartier</h3>
+      <ul>
+        <li><strong>Panetteria</strong> : pain de qualité (pas en supermarché). Cherchez "forno" ou "panificio"</li>
+        <li><strong>Salumeria</strong> : charcuterie artisanale (prosciutto, salame)</li>
+        <li><strong>Formaggeria</strong> : fromagerie (Parmigiano, Gorgonzola, Taleggio)</li>
+        <li><strong>Pescheria</strong> : poissonnier (marchés ou boutiques)</li>
+        <li><strong>Frutta e Verdura</strong> : primeur</li>
+        <li><strong>Bottega</strong> : épicier de quartier (produits locaux)</li>
+      </ul>
+      <p style="margin-top:8px">📌 Astuce : les meilleurs produits sont dans les petites rues (vicoli) derrière les grands axes.</p>
+    </div>
+  </div>
+
+  <div id="sub-repas" style="display:none">
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Repas à Milan')">☆</button>
+      <h3>Repas & Budget</h3>
+      <table>
+        <tr><th>Type</th><th>Prix moyen</th><th>Notes</th></tr>
+        <tr><td>Tramezzino (sandwich)</td><td>3-5 €</td><td>Déjeuner rapide</td></tr>
+        <tr><td>Pranzo (formule midi)</td><td>10-18 €</td><td>2 plats + boisson, 12h-14h30</td></tr>
+        <tr><td>Cena (dîner)</td><td>20-40 €</td><td>Restaurant classique</td></tr>
+        <tr><td>Osteria / Trattoria</td><td>15-30 €</td><td>Authentique, local</td></tr>
+        <tr><td>Bar (café + cornetto)</td><td>1,50-2,50 €</td><td>À emporter au comptoir</td></tr>
+      </table>
+      <p style="margin-top:8px">📌 <strong>Pranzo</strong> : la formule du midi est le meilleur rapport qualité/prix. Cherchez "menù del giorno" ou "pranzo fisso".</p>
+    </div>
+    <div class="card">
+      <h3>Quartiers pour manger bien et pas cher</h3>
+      <ul>
+        <li><strong>Brera</strong> : osterie, trattorie</li>
+        <li><strong>Isola</strong> : moderne, brunch, street food</li>
+        <li><strong>Navigli</strong> : restaurants le long du canal</li>
+        <li><strong>Chiaravalle</strong> : local, pas cher</li>
+        <li><strong>Porta Romana</strong> : cuisine du monde</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODULE 3: VIE PRATIQUE ===== -->
+<div class="section" id="sec-pratique">
+  <h2 class="section-title">🏠 Vie Pratique</h2>
+
+  <div class="card">
+    <button class="fav-btn" onclick="toggleFav(this,'Tri des déchets Milan')">☆</button>
+    <h3>Tri des déchets à Milan</h3>
+    <table>
+      <tr><th>Flux</th><th>Conteneur</th><th>Contenu</th><th>Fréquence</th></tr>
+      <tr><td>Organico</td><td><span class="tag tag-green">Vert</span></td><td>Réste de nourriture, coquilles, marc de café</td><td>Quotidien</td></tr>
+      <tr><td>Indifferenziato</td><td><span class="tag tag-orange">Gris</span></td><td>Non recyclable (coton, plastiques souillés)</td><td>Hebdo</td></tr>
+      <tr><td>Vetro</td><td><span class="tag tag-blue">Vert foncé</span></td><td>Bouteilles, pots, vitres</td><td>Quotidien</td></tr>
+      <tr><td>Carta</td><td><span class="tag tag-blue">Bleu</span></td><td>Journal, cartons (aplatis), papier</td><td>Quotidien</td></tr>
+      <tr><td>Plastica</td><td><span class="tag tag-orange">Jaune</span></td><td>Bouteilles PET, flacons, emballages</td><td>Quotidien</td></tr>
+      <tr><td>Metalli</td><td><span class="tag tag-orange">Jaune</span></td><td>Boîtes, canettes, aluminium</td><td>Quotidien</td></tr>
+    </table>
+    <p style="margin-top:8px">📌 Les conteneurs sont dans les "isole ecologiche" (îlots de tri) de quartier. Horaires : voir panneau sur l'îlot.</p>
+  </div>
+
+  <div class="card">
+    <button class="fav-btn" onclick="toggleFav(this,'Pharmacies de garde')">☆</button>
+    <h3>Pharmacies de garde</h3>
+    <ul>
+      <li><strong>Comment trouver</strong> : app "Farmacie di turno" ou site <em>farmacie.milano</em></li>
+      <li><strong>Téléphone</strong> : 02 77602 (annuaire pharmacies)</li>
+      <li><strong>Horaires</strong> : les pharmacies de garde sont ouvertes 24h/24 le jour du tour</li>
+      <li><strong>En semaine</strong> : toutes les pharmacies sont ouvertes (8h30-19h30, certaines jusqu'à 21h)</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <button class="fav-btn" onclick="toggleFav(this,'Laverie Milan')">☆</button>
+    <h3>Laverie automatique</h3>
+    <ul>
+      <li><strong>App</strong> : "Lava e Asciuga" ou "Lava" (localisation)</li>
+      <li><strong>Prix moyen</strong> : 3-5 € le cycle (machine à laver), 2-3 € (sèche-linge)</li>
+      <li><strong>Paiement</strong> : pièces (1€, 50c) ou carte (selon machine)</li>
+      <li><strong>Quartiers</strong> : Isola, Brera, Navigli, Lambrate</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <button class="fav-btn" onclick="toggleFav(this,'Services postaux')">☆</button>
+    <h3>Bureaux de poste & Services</h3>
+    <ul>
+      <li><strong>Poste principale</strong> : Piazza della Repubblica (horaires 8h30-13h30)</li>
+      <li><strong>Distributeurs</strong> : ATM, Intesa, UniCredit (partout)</li>
+      <li><strong>Tabaccheria</strong> : timbres, tickets bus, photocopies</li>
+      <li><strong>Photocopies</strong> : tabaccheria, libreria, ou "copisteria"</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== MODULE 4: SANTÉ ===== -->
+<div class="section" id="sec-sante">
+  <h2 class="section-title">🏥 Santé & Urgences</h2>
+
+  <div class="card">
+    <button class="fav-btn" onclick="toggleFav(this,'Numéros d\'urgence')">☆</button>
+    <h3>Numéros d'urgence</h3>
+    <table>
+      <tr><th>Service</th><th>Numéro</th><th>Quand appeler</th></tr>
+      <tr><td>Urgence unique</td><td><strong>112</strong></td><td>Tout type d'urgence</td></tr>
+      <tr><td>Samu / Ambulance</td><td><strong>118</strong></td><td>Urgence médicale</td></tr>
+      <tr><td>Police</td><td><strong>113</strong></td><td>Voleur, agression</td></tr>
+      <tr><td>Carabiniers</td><td><strong>112</strong></td><td>Police militaire</td></tr>
+      <tr><td>Feu / Secours</td><td><strong>115</strong></td><td>Incendie</td></tr>
+      <tr><td>Guardia Medica</td><td><strong>118</strong></td><td>Médecin de garde (hors urgence)</td></tr>
+    </table>
+    <p style="margin-top:8px">📌 <strong>112</strong> est le numéro unique européen. Vous pouvez parler en anglais.</p>
+  </div>
+
+  <div class="card">
+    <button class="fav-btn" onclick="toggleFav(this,'Hôpitaux Milan')">☆</button>
+    <h3>Hôpitaux & Urgences</h3>
+    <table>
+      <tr><th>Hôpital</th><th>Quartier</th><th>Urgences</th></tr>
+      <tr><td>Policlinico</td><td>Centrale</td><td>24h/24</td></tr>
+      <tr><td>Sacco (Ospedale Sacco)</td><td>Monza (nord)</td><td>24h/24</td></tr>
+      <tr><td>San Raffaele</td><td>Castellanza (est)</td><td>24h/24</td></tr>
+      <tr><td>Niguarda</td><td>Lambrate</td><td>24h/24</td></tr>
+      <tr><td>Buzzi</td><td>CityLife (nord)</td><td>24h/24</td></tr>
+    </table>
+    <p style="margin-top:8px">📌 Pour une urgence : <strong>118</strong>. Pour un rendez-vous : <strong>118</strong> (Guardia Medica) ou le <strong>medico di base</strong>.</p>
+  </div>
+
+  <div class="card">
+    <button class="fav-btn" onclick="toggleFav(this,'Médecin de garde')">☆</button>
+    <h3>Médecin de garde (Guardia Medica)</h3>
+    <ul>
+      <li><strong>Hors urgence vitale</strong> : appelez le <strong>118</strong> et demandez "Guardia Medica"</li>
+      <li><strong>Horaires</strong> : 15h-8h (jours ouvrés), 8h-8h (weekends/fériés)</li>
+      <li><strong>Coût</strong> : ~25-35 € (ticket de moduli, déductible)</li>
+      <li><strong>Localisation</strong> : le numéro 118 vous donne l'adresse de la Guardia du jour</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Documents utiles</h3>
+    <ul>
+      <li><strong>Carte Européenne d'Assurance Maladie (CEAM)</strong> : à demander avant le départ (CPAM)</li>
+      <li><strong>Assurance voyage</strong> : vérifiez qu'elle couvre l'Italie</li>
+      <li><strong>Ordonnances</strong> : gardez l'original + traduction si possible</li>
+      <li><strong>Vaccins</strong> : hépatite A/B, tétanos (rappel)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== MODULE 5: CULTURE ===== -->
+<div class="section" id="sec-culture">
+  <h2 class="section-title">🎨 Culture & Sorties</h2>
+
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="showSub(this,'musees')">Musées</button>
+    <button class="sub-tab" onclick="showSub(this,'evenements')">Événements</button>
+    <button class="sub-tab" onclick="showSub(this,'balades')">Balades</button>
+    <button class="sub-tab" onclick="showSub(this,'spectacles')">Spectacles</button>
+  </div>
+
+  <div id="sub-musees">
+    <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this,'Musées Milan')">☆</button>
+      <h3>Musées principaux</h3>
+      <table>
+        <tr><th>Musée</th><th>Tarif</th><th>Horaires</th><th>Gratuit</th></tr>
+        <tr><td>Pinacoteca di Brera</td><td>15 €</td><td>9h-19h30 (mar-dim)</td><td>1er dim/mois</td></tr>
+        <tr><td>Galleria Sforza</td><td>10 €</td><td>9h-17h15</td><td>1er dim/mois</td></tr>
+        <tr><td>Castello Sforzes
