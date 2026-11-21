@@ -39,17 +39,30 @@ input[type=date]{min-height:42px}
 .hero{background:var(--ac);color:#fff;border-radius:16px;padding:16px;margin:0 0 6px}
 .hero b{font-size:28px;display:block}
 nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding:6px 6px calc(env(safe-area-inset-bottom) + 6px)}
-nav button{flex:1;background:none;border:0;padding:8px 2px;font-size:11px;color:var(--mu)}
-nav button span{display:block;font-size:20px}
+nav button{flex:1;background:none;border:0;padding:8px 0;font-size:10px;color:var(--mu)}
+nav button span{display:block;font-size:19px}
+#big{position:fixed;inset:0;background:var(--bg);z-index:9;display:flex;flex-direction:column;justify-content:center;padding:24px;text-align:center}
+#big[hidden]{display:none}
+#big .it{font-size:34px;font-weight:700;line-height:1.2}
+#big .fr{color:var(--mu);margin-top:16px;font-size:15px}
 nav button.on{color:var(--ac);font-weight:600}
 a{color:var(--ac)}
 .tel{display:flex;justify-content:space-between;align-items:center;text-decoration:none;color:var(--tx)}
 .tel b{font-size:20px;color:var(--er)}
 label.l{display:block;font-size:13px;color:var(--mu);margin:0 0 3px}
+.bar{height:6px;border-radius:4px;background:var(--ac2);margin-top:6px}
+.bar i{display:block;height:100%;border-radius:4px;background:var(--ac)}
+.mn{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
+.mn b{text-transform:capitalize}.mn .x{font-size:28px;padding:0 14px}
+a.chip{text-decoration:none}
+.seg{display:flex;gap:6px;margin:0 0 12px}
+.seg button{flex:1;padding:8px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx)}
+.seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="big" data-a="bigclose" hidden></div>
 <nav id="nav"></nav>
 <input type="file" id="imp" accept="application/json,.json" hidden>
 <script>
@@ -88,7 +101,7 @@ const TPL=[
 ];
 const DOCT=['Pièce d\'identité','Passeport','CEAM','Assurance','Learning Agreement','Contrat de location','Abonnement ATM','Carte étudiante','Autre'];
 const EMERG=[['112','Numéro d\'urgence unique'],['118','Urgences médicales'],['113','Police'],['115','Pompiers']];
-const blank=()=>({settings:{arrival:'',departure:''},tasks:{},custom:[],docs:[]});
+const blank=()=>({settings:{arrival:'',departure:''},tasks:{},custom:[],docs:[],fav:[],contacts:[],budget:{limit:'',income:'',exp:[]}});
 let S=load(),tab='today';
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r)return Object.assign(blank(),r)}catch(e){}return blank()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Sauvegarde impossible. Exporte tes données.')}}
@@ -123,7 +136,7 @@ function vToday(){
   else hero=`<div class="hero"><b>Jour ${1-n}</b>à Milan depuis le ${fmt(a)}</div>`}
  const all=items().filter(i=>i.due&&!i.done).sort((x,y)=>x.due<y.due?-1:x.due>y.due?1:0);
  const g=[['En retard',i=>diff(i.due)<0],['Cette semaine',i=>diff(i.due)>=0&&diff(i.due)<=7],['Ce mois-ci',i=>diff(i.due)>7&&diff(i.due)<=30],['Plus tard',i=>diff(i.due)>30]];
- let h=`<h1>Milano</h1><p class="sub">${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</p>${hero}`;
+ let h=`<h1>Milano</h1><p class="sub">${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</p>${hero}${backupBanner()}`;
  g.forEach(([n,f])=>{const l=all.filter(f);if(l.length)h+=`<h2>${n} (${l.length})</h2>`+l.map(itemRow).join('')});
  if(!all.length)h+='<p class="sub">Aucune échéance datée. Définis tes dates dans Réglages.</p>';
  const sd=items().filter(i=>!i.due&&!i.done&&i.kind!=='doc').length;
@@ -141,8 +154,8 @@ function vCheck(){
    ${t.v?'<span class="chip w">à vérifier</span>':''}${late?'<span class="chip e">en retard</span>':''}
    <input type="date" class="dd" data-c="taskdue" data-id="${t.id}" value="${due}"></div></div>`})});
  return h}
-function vDocs(){
- let h='<h1>Coffre</h1><p class="sub">Suivi des documents et de leurs expirations. Ne saisis pas de numéros complets : garde les fichiers dans l\'app Fichiers/iCloud et note seulement leur emplacement.</p>';
+function vDocsList(){
+ let h='<p class="sub">Suivi des documents et de leurs expirations. Ne saisis pas de numéros complets : garde les fichiers dans l\'app Fichiers/iCloud et note seulement leur emplacement.</p>';
  const ds=[...S.docs].sort((a,b)=>(a.expiry||'9999')<(b.expiry||'9999')?-1:1);
  ds.forEach(d=>{let ch='';if(d.expiry){const n=diff(d.expiry);ch=n<0?'<span class="chip e">Expiré</span>':n<60?`<span class="chip w">Expire dans ${n} j</span>`:`<span class="chip">Expire le ${fmt(d.expiry)}</span>`}
   h+=`<div class="card row"><div class="grow"><div class="t">${esc(d.label)}</div><div class="d">${esc(d.type)}${d.loc?' · '+esc(d.loc):''}</div>${ch}</div><button class="x" data-a="deldoc" data-id="${d.id}">×</button></div>`});
@@ -156,22 +169,155 @@ function vSet(){
  <label class="l">Fin du semestre / départ</label><input type="date" data-c="set" data-f="departure" value="${S.settings.departure||''}"></div>
  <h2>Rappels iPhone</h2><div class="card"><p class="d" style="margin:0 0 8px">L'app ne peut pas t'envoyer de notifications. Exporte les échéances dans le Calendrier iOS, qui enverra les rappels. Réexporte après avoir changé des dates.</p>
  <button class="btn" data-a="ics">Exporter vers le Calendrier (.ics)</button></div>
- <h2>Données</h2><div class="card"><p class="d" style="margin:0 0 8px">Les données restent sur cet iPhone. Exporte une sauvegarde régulièrement.</p>
+ <h2>Données</h2><div class="card"><p class="d" style="margin:0 0 8px">Les données restent sur cet iPhone. Exporte une sauvegarde régulièrement.</p><p class="d" style="margin:0 0 8px">Dernière sauvegarde : ${S.lastExport?fmt(S.lastExport):'aucune'}.</p>
  <button class="btn s" data-a="json">Exporter (JSON)</button><button class="btn s" data-a="imp">Importer (JSON)</button><button class="btn r" data-a="reset">Tout effacer</button></div>
  <h2>Urgences en Italie</h2>`;
  EMERG.forEach(([n,l])=>h+=`<a class="card tel" href="tel:${n}"><span>${l}</span><b>${n}</b></a>`);
  h+='<p class="sub">Vérifie ces numéros avant ton départ.</p>';
  return h}
+// Phrases : [français, italien]. Registre formel (Lei) par défaut.
+const PHR=[
+{id:"base",i:"👋",t:"Bases et politesse",p:[
+["Bonjour","Buongiorno"],["Bonsoir","Buonasera"],["Merci beaucoup","Grazie mille"],["S'il vous plaît","Per favore"],
+["Excusez-moi","Mi scusi"],["Je ne parle pas bien italien","Non parlo bene l'italiano"],
+["Pouvez-vous parler plus lentement ?","Può parlare più lentamente, per favore?"],["Pouvez-vous répéter ?","Può ripetere, per favore?"],
+["Je ne comprends pas","Non capisco"],["Parlez-vous anglais ?","Parla inglese?"],
+["Je suis ici pour un semestre Erasmus au Politecnico di Milano","Sono qui per un semestre Erasmus al Politecnico di Milano"]]},
+{id:"admin",i:"🏛",t:"Administration (anagrafe, codice fiscale…)",p:[
+["Je voudrais demander le codice fiscale","Vorrei richiedere il codice fiscale"],["J'ai la nationalité française","Ho la cittadinanza francese"],
+["Je dois m'inscrire à l'anagrafe","Devo iscrivermi all'anagrafe"],["Quels documents dois-je apporter ?","Quali documenti devo portare?"],
+["Faut-il prendre rendez-vous ?","Serve un appuntamento?"],["Où est le guichet numéro… ?","Dov'è lo sportello numero…?"],
+["Voici ma carte d'identité","Ecco la mia carta d'identità"],["Pouvez-vous me donner un justificatif ?","Può darmi una ricevuta, per favore?"],
+["Pouvez-vous signer et tamponner ce document ?","Può firmare e mettere il timbro su questo documento?"],
+["Je suis ici en échange Erasmus","Sono qui in scambio Erasmus"]]},
+{id:"univ",i:"🎓",t:"Université",p:[
+["Où est le bureau des relations internationales ?","Dov'è l'ufficio relazioni internazionali?"],["J'ai besoin d'une attestation d'arrivée","Ho bisogno di un certificato di arrivo"],
+["Je dois faire signer mon Learning Agreement","Devo far firmare il mio Learning Agreement"],["À quelle heure commence le cours ?","A che ora inizia la lezione?"],
+["Où se trouve la salle… ?","Dov'è l'aula…?"],["Quand sont les examens ?","Quando sono gli esami?"],
+["Comment m'inscrire à l'examen ?","Come mi iscrivo all'esame?"],["Puis-je passer l'examen en anglais ?","Posso sostenere l'esame in inglese?"],
+["Je voudrais parler à l'enseignant","Vorrei parlare con il docente"],["Où est la bibliothèque ?","Dov'è la biblioteca?"]]},
+{id:"log",i:"🏠",t:"Logement et propriétaire",p:[
+["J'ai un problème avec le chauffage","Ho un problema con il riscaldamento"],["Il n'y a pas d'eau chaude","Non c'è acqua calda"],
+["La machine à laver est en panne","La lavatrice è rotta"],["Le loyer comprend-il les charges ?","L'affitto comprende le spese?"],
+["Avant quelle date dois-je payer le loyer ?","Entro quando devo pagare l'affitto?"],["Quel est le délai de préavis ?","Qual è il preavviso?"],
+["Le contrat est-il enregistré ?","Il contratto è registrato?"],["Quand me rendrez-vous la caution ?","Quando mi restituirà il deposito cauzionale?"],
+["Pouvons-nous faire l'inventaire de l'appartement ?","Possiamo fare l'inventario dell'appartamento?"],["Voici le relevé du compteur","Ecco la lettura del contatore"]]},
+{id:"trans",i:"🚇",t:"Transports",p:[
+["Un abonnement mensuel, s'il vous plaît","Un abbonamento mensile, per favore"],["Où dois-je valider mon billet ?","Dove devo convalidare il biglietto?"],
+["Quelle ligne va au Politecnico ?","Quale linea va al Politecnico?"],["Quand part le prochain train pour Bologne ?","Quando parte il prossimo treno per Bologna?"],
+["De quel quai part-il ?","Da quale binario parte?"],["Le train est en retard","Il treno è in ritardo"],
+["J'ai perdu mon billet","Ho perso il biglietto"],["Un aller simple","Un biglietto di sola andata"],["Un aller-retour","Un biglietto di andata e ritorno"],
+["Je descends au prochain arrêt","Scendo alla prossima fermata"]]},
+{id:"sante",i:"💊",t:"Santé",p:[
+["J'ai besoin d'un médecin","Ho bisogno di un medico"],["Où est la pharmacie de garde ?","Dov'è la farmacia di turno?"],
+["J'ai mal à la gorge","Ho mal di gola"],["J'ai mal à la tête","Ho mal di testa"],["J'ai mal au ventre","Ho mal di pancia"],
+["J'ai de la fièvre","Ho la febbre"],["J'ai une allergie à…","Ho un'allergia a…"],["Je prends ce médicament","Prendo questo farmaco"],
+["J'ai la carte européenne d'assurance maladie","Ho la tessera europea di assicurazione malattia"]]},
+{id:"vie",i:"🛒",t:"Courses, poste, téléphone",p:[
+["Combien ça coûte ?","Quanto costa?"],["Je voudrais…","Vorrei…"],["Puis-je payer par carte ?","Posso pagare con la carta?"],
+["Le ticket de caisse, s'il vous plaît","Lo scontrino, per favore"],["Où est le supermarché le plus proche ?","Dov'è il supermercato più vicino?"],
+["Vendez-vous des tickets de transport ?","Vendete biglietti dei mezzi pubblici?"],["Je voudrais envoyer cette lettre en France","Vorrei spedire questa lettera in Francia"],
+["Je viens retirer un colis","Vorrei ritirare un pacco"],["Je voudrais une carte SIM prépayée","Vorrei una SIM prepagata"]]},
+{id:"social",i:"🍝",t:"Bar, restaurant, rencontres",p:[
+["Un café, s'il vous plaît","Un caffè, per favore"],["L'addition, s'il vous plaît","Il conto, per favore"],["Une table pour deux, s'il vous plaît","Un tavolo per due, per favore"],
+["Que me conseillez-vous ?","Cosa mi consiglia?"],["Je ne mange pas de viande","Non mangio carne"],["Tu veux prendre un apéritif ?","Ti va di fare un aperitivo?"],
+["Je m'appelle…","Mi chiamo…"],["Enchanté","Piacere"],["D'où viens-tu ?","Di dove sei?"],["Je viens de France","Vengo dalla Francia"],
+["Peux-tu m'aider à pratiquer l'italien ?","Mi aiuti a esercitarmi con l'italiano?"],["À bientôt","A presto"]]},
+{id:"urg",i:"🚨",t:"Urgences et problèmes",p:[
+["Au secours !","Aiuto!"],["C'est une urgence","È un'emergenza"],["Appelez une ambulance, s'il vous plaît","Chiami un'ambulanza, per favore"],
+["Appelez la police, s'il vous plaît","Chiami la polizia, per favore"],["On m'a volé mon portefeuille","Mi hanno rubato il portafoglio"],
+["J'ai perdu ma carte d'identité","Ho perso la mia carta d'identità"],["Je dois faire une déclaration de vol","Devo fare una denuncia di furto"],
+["Pouvez-vous m'aider ?","Mi può aiutare?"],["Où est le commissariat ?","Dov'è il commissariato?"]]}
+];
+let q='',openP=new Set(['base']);
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function phrRow(sid,i,fr,it){const id=sid+i,f=S.fav.includes(id);
+ return `<div class="card"><div class="row"><div class="grow" data-a="big" data-it="${esc(it)}" data-fr="${esc(fr)}"><div class="t" style="font-size:17px">${esc(it)}</div><div class="d">${esc(fr)}</div></div>
+ <button class="x" data-a="say" data-it="${esc(it)}">🔊</button><button class="x" data-a="fav" data-id="${id}">${f?'★':'☆'}</button></div></div>`}
+function plist(){
+ const k=norm(q.trim());let h='';const favs=[];
+ PHR.forEach(s=>s.p.forEach(([fr,it],i)=>{if(S.fav.includes(s.id+i))favs.push(phrRow(s.id,i,fr,it))}));
+ if(!k&&favs.length)h+=`<h2>★ Favoris (${favs.length})</h2>`+favs.join('');
+ PHR.forEach(s=>{
+  const m=s.p.map(([fr,it],i)=>[fr,it,i]).filter(([fr,it])=>!k||norm(fr+' '+it).includes(k));
+  if(!m.length)return;
+  const open=k||openP.has(s.id);
+  h+=`<button class="btn s" style="text-align:left" data-a="ptoggle" data-id="${s.id}">${s.i} ${esc(s.t)}<span style="float:right;color:var(--mu)">${open?'−':'+'}</span></button>`;
+  if(open)h+=m.map(([fr,it,i])=>phrRow(s.id,i,fr,it)).join('')});
+ if(k&&!h)h='<p class="sub">Aucun résultat.</p>';
+ return h}
+function vItal(){return `<h1>Italien</h1><p class="sub">Touche une phrase pour l'afficher en grand et la montrer. 🔊 pour l'écouter, ☆ pour la garder en favori.</p><input type="text" id="pq" placeholder="Rechercher (français ou italien)" value="${esc(q)}"><div id="plist">${plist()}</div>`}
+function say(t){if(!('speechSynthesis' in window)){alert('Synthèse vocale indisponible.');return}
+ speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='it-IT';u.rate=.9;
+ const v=speechSynthesis.getVoices().find(x=>x.lang&&x.lang.replace('_','-').toLowerCase().startsWith('it'));if(v)u.voice=v;speechSynthesis.speak(u)}
+let bm=iso(today()).slice(0,7);
+const CATS=['Loyer','Courses','Restau / bars','Transport','Téléphone / internet','Études','Loisirs / voyages','Santé','Autre'];
+const eur=n=>n.toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
+const num=s=>{const n=parseFloat(String(s).replace(',','.'));return isFinite(n)?n:NaN};
+const mine=e=>e.amount/(e.n||1);
+function vBudget(){
+ const B=S.budget,lim=num(B.limit),inc=num(B.income);
+ const list=B.exp.filter(e=>e.date.slice(0,7)===bm).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+ const spent=list.reduce((s,e)=>s+mine(e),0);
+ const owed=B.exp.filter(e=>(e.n||1)>1&&!e.reimb).reduce((s,e)=>s+e.amount-mine(e),0);
+ const cat={};list.forEach(e=>cat[e.cat]=(cat[e.cat]||0)+mine(e));
+ const mx=Math.max(0,...Object.values(cat));
+ let h=`<h1>Budget</h1><div class="mn"><button class="x" data-a="mnav" data-v="-1">‹</button><b>${esc(parse(bm+'-01').toLocaleDateString('fr-FR',{month:'long',year:'numeric'}))}</b><button class="x" data-a="mnav" data-v="1">›</button></div>`;
+ let ch='';
+ if(isFinite(lim)&&lim>0){const p=spent/lim;ch=p>1?`<span class="chip e">Dépassé de ${eur(spent-lim)}</span>`:p>=.8?`<span class="chip w">${Math.round(p*100)} % du budget</span>`:`<span class="chip">${Math.round(p*100)} % du budget</span>`}
+ h+=`<div class="hero"><b>${eur(spent)}</b>dépensés (ma part)${isFinite(lim)?' sur '+eur(lim):''}</div>${ch}`;
+ if(isFinite(inc))h+=`<p class="sub">Solde du mois : ${eur(inc-spent)} (revenus ${eur(inc)})</p>`;
+ if(owed>0.005)h+=`<div class="card"><div class="t">À récupérer (coloc) : ${eur(owed)}</div><div class="d">Dépenses partagées dont les autres ne t'ont pas encore remboursé (tous mois confondus).</div></div>`;
+ h+=`<h2>Ajouter une dépense</h2><div class="card"><input type="text" id="ea" inputmode="decimal" placeholder="Montant payé (€)">
+ <input type="date" id="ed" value="${iso(today())}"><select id="ec">${CATS.map(c=>`<option>${esc(c)}</option>`).join('')}</select>
+ <input type="text" id="en" placeholder="Note (optionnel)">
+ <label class="l">Partagé entre (toi inclus). 1 = dépense perso. Si plus de 1, tu as avancé le total.</label>
+ <input type="text" id="es" inputmode="numeric" value="1"><button class="btn" data-a="addexp">Ajouter</button></div>`;
+ const cs=Object.entries(cat).sort((a,b)=>b[1]-a[1]);
+ if(cs.length){h+='<h2>Par catégorie</h2>';cs.forEach(([k,v])=>h+=`<div class="card"><div class="row"><div class="grow t">${esc(k)}</div><div>${eur(v)}</div></div><div class="bar"><i style="width:${mx?Math.round(v/mx*100):0}%"></i></div></div>`)}
+ h+=`<h2>Dépenses (${list.length})</h2>`;
+ list.forEach(e=>{h+=`<div class="card row"><div class="grow"><div class="t">${esc(e.note||e.cat)}</div><div class="d">${fmt(e.date)} · ${esc(e.cat)}</div>
+ ${(e.n||1)>1?`<div class="d">Total ${eur(e.amount)} ÷ ${e.n} = ma part ${eur(mine(e))}</div><label class="d"><input type="checkbox" style="width:18px;height:18px" data-a="reimb" data-id="${e.id}" ${e.reimb?'checked':''}> Les autres m'ont remboursé</label>`:''}</div>
+ <div class="t">${eur(mine(e))}</div><button class="x" data-a="delexp" data-id="${e.id}">×</button></div>`});
+ if(!list.length)h+='<p class="sub">Aucune dépense ce mois-ci.</p>';
+ h+=`<h2>Réglages du budget</h2><div class="card"><label class="l">Budget mensuel maximum (€) : déclenche l'alerte</label>
+ <input type="text" inputmode="decimal" data-c="bset" data-f="limit" value="${esc(B.limit)}">
+ <label class="l">Revenus mensuels (€) : bourse + aides + autres (optionnel)</label>
+ <input type="text" inputmode="decimal" data-c="bset" data-f="income" value="${esc(B.income)}"></div>`;
+ return h}
+let dsub='docs';
+const CC=['Polimi','Santé','Logement','Administration','Banque','Famille / proches','Autre'];
+const LINKS=[['Polimi','https://www.polimi.it'],['ATM Milano (transports)','https://www.atm.it'],['Trenitalia','https://www.trenitalia.com'],['Italo','https://www.italotreno.it'],['Agenzia delle Entrate','https://www.agenziaentrate.gov.it'],['ameli (CEAM)','https://www.ameli.fr'],['Erasmus Student Network','https://esn.org']];
+function vAnn(){
+ let h='<p class="sub">Contacts et liens. Tout reste sur ton iPhone. Saisis les numéros toi-même : je n\'ai pas de coordonnées vérifiées à te fournir.</p>';
+ CC.forEach(c=>{const l=S.contacts.filter(x=>x.cat===c);if(!l.length)return;h+=`<h2>${esc(c)}</h2>`;
+  l.forEach(x=>{h+=`<div class="card row"><div class="grow"><div class="t">${esc(x.name)}</div>${x.note?`<div class="d">${esc(x.note)}</div>`:''}
+  ${x.tel?`<a class="chip" href="tel:${esc(x.tel.replace(/[^\d+]/g,''))}">📞 ${esc(x.tel)}</a>`:''}${x.mail?`<a class="chip" href="mailto:${esc(x.mail)}">✉️ ${esc(x.mail)}</a>`:''}${x.addr?`<a class="chip" href="https://maps.apple.com/?q=${encodeURIComponent(x.addr)}">📍 ${esc(x.addr)}</a>`:''}</div>
+  <button class="x" data-a="delct" data-id="${x.id}">×</button></div>`})});
+ if(!S.contacts.length)h+='<p class="sub">Aucun contact. Ajoute le bureau international, ton médecin, ton propriétaire, le consulat…</p>';
+ h+=`<h2>Ajouter un contact</h2><div class="card"><input type="text" id="kn" placeholder="Nom (ex : Bureau international Polimi)">
+ <select id="kc">${CC.map(c=>`<option>${esc(c)}</option>`).join('')}</select>
+ <input type="text" id="kt" inputmode="tel" placeholder="Téléphone"><input type="text" id="km" inputmode="email" placeholder="E-mail">
+ <input type="text" id="ka" placeholder="Adresse"><input type="text" id="ko" placeholder="Note (horaires, guichet…)">
+ <button class="btn" data-a="addct">Ajouter</button></div>
+ <h2>Liens utiles (réseau requis)</h2>`+LINKS.map(([n,u])=>`<a class="card tel" href="${u}" target="_blank" rel="noopener"><span>${esc(n)}</span><span class="d">↗</span></a>`).join('')+'<p class="sub">Vérifie que ce sont bien les sites officiels actuels.</p>';
+ return h}
+function vDocs(){return `<h1>${dsub==='ann'?'Contacts':'Coffre'}</h1><div class="seg"><button data-a="dsub" data-v="docs" class="${dsub==='docs'?'on':''}">Documents</button><button data-a="dsub" data-v="ann" class="${dsub==='ann'?'on':''}">Contacts</button></div>`+(dsub==='ann'?vAnn():vDocsList())}
+function backupBanner(){
+ const has=S.docs.length||S.budget.exp.length||S.custom.length||S.contacts.length||Object.keys(S.tasks).length;if(!has)return'';
+ const n=S.lastExport?-diff(S.lastExport):null;
+ if(n!==null&&n<=14)return'';
+ return `<div class="card" style="border-color:var(--wa)"><div class="t">⚠️ Sauvegarde</div><div class="d">${n===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+n+' jours.'} iOS peut effacer les données locales.</div><button class="btn s" style="margin-top:8px" data-a="json">Exporter maintenant</button></div>`}
 function render(){
  const y=window.scrollY;
- document.getElementById('app').innerHTML={today:vToday,check:vCheck,docs:vDocs,set:vSet}[tab]();
- document.getElementById('nav').innerHTML=[['today','🗓','Aujourd\'hui'],['check','✅','Démarches'],['docs','🗂','Coffre'],['set','⚙️','Réglages']]
+ document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet}[tab]();
+ document.getElementById('nav').innerHTML=[['today','🗓','Accueil'],['check','✅','Démarches'],['budget','💶','Budget'],['ital','🇮🇹','Italien'],['docs','🗂','Dossier'],['set','⚙️','Réglages']]
   .map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><span>${i}</span>${l}</button>`).join('');
  window.scrollTo(0,y)}
 async function outFile(name,text,mime){
  const f=new File([text],name,{type:mime});
- if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return}catch(e){if(e.name==='AbortError')return}}
- const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return true}catch(e){if(e.name==='AbortError')return false}}
+ const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);return true}
 const icsEsc=s=>String(s).replace(/[\\;,]/g,m=>'\\'+m).replace(/\n/g,'\\n');
 function buildIcs(){
  const st=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
@@ -191,7 +337,21 @@ document.addEventListener('click',e=>{
  if(a==='adddoc'){const l=document.getElementById('dl').value.trim();if(!l){alert('Nom requis.');return}
   S.docs.push({id:uid(),type:document.getElementById('dt').value,label:l,expiry:document.getElementById('de').value,loc:document.getElementById('dloc').value.trim()});save();render();return}
  if(a==='deldoc'){if(confirm('Supprimer ce document du coffre ?')){S.docs=S.docs.filter(d=>d.id!==id);save();render()}return}
- if(a==='json'){outFile('milano-sauvegarde-'+iso(today())+'.json',JSON.stringify(S,null,1),'application/json');return}
+ if(a==='mnav'){const[y,m]=bm.split('-').map(Number);const x=new Date(y,m-1+Number(b.dataset.v),1);bm=x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0');render();return}
+ if(a==='addexp'){const am=num(document.getElementById('ea').value),d=document.getElementById('ed').value,n=Math.max(1,parseInt(document.getElementById('es').value)||1);
+  if(!(am>0)||!d){alert('Montant et date requis.');return}
+  S.budget.exp.push({id:uid(),date:d,amount:Math.round(am*100)/100,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),n,reimb:false});save();bm=d.slice(0,7);render();return}
+ if(a==='delexp'){if(confirm('Supprimer cette dépense ?')){S.budget.exp=S.budget.exp.filter(x=>x.id!==id);save();render()}return}
+ if(a==='dsub'){dsub=b.dataset.v;render();return}
+ if(a==='addct'){const nm=document.getElementById('kn').value.trim();if(!nm){alert('Nom requis.');return}
+  S.contacts.push({id:uid(),name:nm,cat:document.getElementById('kc').value,tel:document.getElementById('kt').value.trim(),mail:document.getElementById('km').value.trim(),addr:document.getElementById('ka').value.trim(),note:document.getElementById('ko').value.trim()});save();render();return}
+ if(a==='delct'){if(confirm('Supprimer ce contact ?')){S.contacts=S.contacts.filter(x=>x.id!==id);save();render()}return}
+ if(a==='ptoggle'){openP.has(id)?openP.delete(id):openP.add(id);document.getElementById('plist').innerHTML=plist();return}
+ if(a==='fav'){const k=S.fav.indexOf(id);if(k>=0)S.fav.splice(k,1);else S.fav.push(id);save();document.getElementById('plist').innerHTML=plist();return}
+ if(a==='say'){say(b.dataset.it);return}
+ if(a==='big'){const z=document.getElementById('big');z.innerHTML=`<div class="it">${esc(b.dataset.it)}</div><div class="fr">${esc(b.dataset.fr)}</div><br><button class="btn" data-a="say" data-it="${esc(b.dataset.it)}">🔊 Écouter</button><div class="fr">Toucher ailleurs pour fermer</div>`;z.hidden=false;return}
+ if(a==='bigclose'){document.getElementById('big').hidden=true;return}
+ if(a==='json'){outFile('milano-sauvegarde-'+iso(today())+'.json',JSON.stringify(S,null,1),'application/json').then(ok=>{if(ok){S.lastExport=iso(today());save();render()}});return}
  if(a==='ics'){outFile('milano-echeances.ics',buildIcs(),'text/calendar');return}
  if(a==='imp'){document.getElementById('imp').click();return}
  if(a==='reset'){if(confirm('Tout effacer ? Cette action est définitive.')){S=blank();save();render()}return}
@@ -203,8 +363,11 @@ document.addEventListener('change',e=>{
   else{const c=S.custom.find(x=>x.id===id);if(c)c.done=t.checked}
   save();render();return}
  if(t.dataset.c==='taskdue'){const id=t.dataset.id;const o=Object.assign({},S.tasks[id]);if(t.value)o.due=t.value;else delete o.due;S.tasks[id]=o;save();render();return}
+ if(t.dataset.a==='reimb'){const x=S.budget.exp.find(v=>v.id===t.dataset.id);if(x){x.reimb=t.checked;save();render()}return}
+ if(t.dataset.c==='bset'){S.budget[t.dataset.f]=t.value;save();render();return}
  if(t.dataset.c==='set'){S.settings[t.dataset.f]=t.value;save();render()}
 });
+document.addEventListener('input',e=>{if(e.target.id==='pq'){q=e.target.value;document.getElementById('plist').innerHTML=plist()}});
 document.getElementById('imp').addEventListener('change',e=>{
  const f=e.target.files[0];if(!f)return;const r=new FileReader();
  r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.settings||!Array.isArray(o.docs))throw 0;S=Object.assign(blank(),o);save();render();alert('Import réussi.')}catch(x){alert('Fichier invalide.')}};
