@@ -9,6 +9,8 @@
 <meta name="theme-color" content="#1a1a2e">
 <title>Milan au Quotidien</title>
 <link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root {
   --bg: #1a1a2e;
@@ -22,7 +24,7 @@
   --warning: #ffb74d;
   --border: #2a2a4a;
   --radius: 12px;
-  --nav-h: 64px;
+  --nav-h: 88px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -36,7 +38,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Header */
 .header {
   position: sticky;
   top: 0;
@@ -71,7 +72,6 @@ body {
 .search-bar:focus { border-color: var(--accent); }
 .search-bar::placeholder { color: var(--text-muted); }
 
-/* Content */
 .content { padding: 16px; }
 
 .section { display: none; }
@@ -131,7 +131,6 @@ body {
 .tag-orange { background: rgba(255,183,77,0.15); color: var(--warning); }
 .tag-red { background: rgba(239,83,80,0.15); color: var(--danger); }
 
-/* Favorite button */
 .fav-btn {
   float: right;
   background: none;
@@ -144,7 +143,6 @@ body {
 }
 .fav-btn.active { opacity: 1; transform: scale(1.1); }
 
-/* Weather widget */
 .weather-widget {
   background: linear-gradient(135deg, #1a237e, #283593);
   border-radius: var(--radius);
@@ -156,7 +154,6 @@ body {
 .weather-widget .desc { font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-top: 4px; }
 .weather-widget .details { display: flex; justify-content: space-around; margin-top: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.7); }
 
-/* Bottom Navigation */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -183,30 +180,28 @@ body {
   color: var(--text-muted);
   font-size: 0.65rem;
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 6px 4px;
   border-radius: 8px;
   transition: color 0.2s;
-  min-width: 60px;
+  min-width: 55px;
 }
-.nav-btn .icon { font-size: 1.4rem; }
+.nav-btn .icon { font-size: 1.3rem; }
 .nav-btn.active { color: var(--accent); }
 
-/* Grid for nav (more than 5 items) */
 .nav-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   width: 100%;
   gap: 2px;
 }
 
-/* Search results */
 .search-results {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: var(--bg);
   z-index: 300;
   padding: 16px;
-  padding-top: calc(16px + env(safe-area-inset-top));
+  padding-top: calc(60px + env(safe-area-inset-top));
   overflow-y: auto;
   display: none;
 }
@@ -224,7 +219,6 @@ body {
   cursor: pointer;
 }
 
-/* Checklist */
 .checklist-item {
   display: flex;
   align-items: center;
@@ -238,7 +232,6 @@ body {
 }
 .checklist-item.done span { text-decoration: line-through; opacity: 0.5; }
 
-/* Table */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -252,7 +245,6 @@ th, td {
 th { color: var(--accent); font-weight: 600; }
 td { color: var(--text-muted); }
 
-/* Sub-section tabs */
 .sub-tabs {
   display: flex;
   gap: 6px;
@@ -278,56 +270,55 @@ td { color: var(--text-muted); }
   border-color: var(--accent);
 }
 
-/* No results */
 .no-results {
   text-align: center;
   padding: 40px 20px;
   color: var(--text-muted);
 }
 
-/* Accordion */
-.accordion-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  padding: 12px 14px;
-  background: var(--bg-card);
+#map {
+  width: 100%;
+  height: 350px;
   border-radius: var(--radius);
+  margin-bottom: 14px;
   border: 1px solid var(--border);
-  margin-bottom: 8px;
-  font-weight: 500;
+  z-index: 1;
 }
-.accordion-header .arrow { transition: transform 0.2s; }
-.accordion-header.open .arrow { transform: rotate(180deg); }
-.accordion-body {
-  display: none;
-  padding: 0 14px 14px;
+.map-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.map-filter-btn {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
   background: var(--bg-card);
-  border-radius: 0 0 var(--radius) var(--radius);
-  margin-top: -8px;
-  margin-bottom: 8px;
-  border: 1px solid var(--border);
-  border-top: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.accordion-body.open { display: block; }
+.map-filter-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
 </style>
 </head>
 <body>
 
-<!-- Header -->
 <div class="header">
   <h1>🇮🇹 Milan au Quotidien</h1>
   <input type="text" class="search-bar" id="searchInput" placeholder="Rechercher (marché, pharmacie, M2...)" autocomplete="off">
 </div>
 
-<!-- Search Results Overlay -->
 <div class="search-results" id="searchResults">
   <button class="back-btn" onclick="closeSearch()">✕ Fermer</button>
   <div id="searchResultsList"></div>
 </div>
 
-<!-- Content -->
 <div class="content">
 
 <!-- ===== MODULE 1: TRANSPORT ===== -->
@@ -357,7 +348,6 @@ td { color: var(--text-muted); }
       <button class="fav-btn" onclick="toggleFav(this,'Tarifs ATM')">☆</button>
       <h3>Tarifs ATM (2025)</h3>
       <ul>
-        <li><strong>Biglietto 10 min</strong> : 2,20 € (bus, tram, métro)</li>
         <li><strong>Biglietto 75 min</strong> : 2,20 € (1 zone, tous transports)</li>
         <li><strong>Giornaliero</strong> : 9,50 € (illimité 24h)</li>
         <li><strong>Settimanale</strong> : 23 € (7 jours)</li>
@@ -391,7 +381,7 @@ td { color: var(--text-muted); }
         <li><strong>Tram 2</strong> : Duomo – Sesto San Giovanni</li>
         <li><strong>Tram 3</strong> : Duomo – Baggio</li>
       </ul>
-      <p style="margin-top:8px">📌 Le tramway est le plus agréable pour traverser la ville. Préférez-le en été.</p>
+      <p style="margin-top:8px">📌 Le tramway est le plus agréable pour traverser la ville.</p>
     </div>
     <div class="card">
       <h3>Horaires</h3>
@@ -416,13 +406,13 @@ td { color: var(--text-muted); }
       <p style="margin-top:8px">📌 Zones principales : Duomo, Brera, Navigli, Isola, CityLife</p>
     </div>
     <div class="card">
-      <h3>Alternatives : vélos en libre-service électriques</h3>
+      <h3>Vélos / scooters en libre-service</h3>
       <ul>
         <li><strong>Lime</strong> : scooters et vélos, app dédiée</li>
         <li><strong>Monriki</strong> : vélos électriques</li>
         <li><strong>Velogreen</strong> : vélos électriques</li>
       </ul>
-      <p style="margin-top:8px">📌 Piste cyclable le long du Naviglio Grande (Duomo → Gratosoglio) : très agréable.</p>
+      <p style="margin-top:8px">📌 Piste cyclable le long du Naviglio Grande : très agréable.</p>
     </div>
   </div>
 
@@ -443,7 +433,7 @@ td { color: var(--text-muted); }
         <li><strong>App</strong> : Trenord (horaires en temps réel)</li>
         <li><strong>Carte 10 voyages</strong> : ~15 € (zone 1-2)</li>
         <li><strong>Carte mensuelle</strong> : ~40 €</li>
-        <li><strong>Destinations populaires</strong> : Côme, Lac Majeur, Bergame, Varèse, Turin</li>
+        <li><strong>Destinations</strong> : Côme, Lac Majeur, Bergame, Varèse, Turin</li>
       </ul>
     </div>
   </div>
@@ -500,7 +490,7 @@ td { color: var(--text-muted); }
         <tr><td>Eataly</td><td>Artisanal / Premium</td><td>9h-21h</td></tr>
         <tr><td>Esselunga</td><td>Gros volumes</td><td>8h-21h (périphérie)</td></tr>
       </table>
-      <p style="margin-top:8px">📌 <strong>Coop</strong> est le plus pratique en centre-ville. <strong>Eataly</strong> (via Torricelli) pour les produits italiens de qualité.</p>
+      <p style="margin-top:8px">📌 <strong>Coop</strong> : le plus pratique en centre-ville. <strong>Eataly</strong> (via Torricelli) pour les produits italiens de qualité.</p>
     </div>
   </div>
 
@@ -509,14 +499,14 @@ td { color: var(--text-muted); }
       <button class="fav-btn" onclick="toggleFav(this,'Artisans Milan')">☆</button>
       <h3>Spécialistes de quartier</h3>
       <ul>
-        <li><strong>Panetteria</strong> : pain de qualité (pas en supermarché). Cherchez "forno" ou "panificio"</li>
-        <li><strong>Salumeria</strong> : charcuterie artisanale (prosciutto, salame)</li>
+        <li><strong>Panetteria</strong> : pain de qualité. Cherchez "forno" ou "panificio"</li>
+        <li><strong>Salumeria</strong> : charcuterie artisanale</li>
         <li><strong>Formaggeria</strong> : fromagerie (Parmigiano, Gorgonzola, Taleggio)</li>
-        <li><strong>Pescheria</strong> : poissonnier (marchés ou boutiques)</li>
+        <li><strong>Pescheria</strong> : poissonnier</li>
         <li><strong>Frutta e Verdura</strong> : primeur</li>
-        <li><strong>Bottega</strong> : épicier de quartier (produits locaux)</li>
+        <li><strong>Bottega</strong> : épicier de quartier</li>
       </ul>
-      <p style="margin-top:8px">📌 Astuce : les meilleurs produits sont dans les petites rues (vicoli) derrière les grands axes.</p>
+      <p style="margin-top:8px">📌 Les meilleurs produits sont dans les petites rues (vicoli) derrière les grands axes.</p>
     </div>
   </div>
 
@@ -532,7 +522,7 @@ td { color: var(--text-muted); }
         <tr><td>Osteria / Trattoria</td><td>15-30 €</td><td>Authentique, local</td></tr>
         <tr><td>Bar (café + cornetto)</td><td>1,50-2,50 €</td><td>À emporter au comptoir</td></tr>
       </table>
-      <p style="margin-top:8px">📌 <strong>Pranzo</strong> : la formule du midi est le meilleur rapport qualité/prix. Cherchez "menù del giorno" ou "pranzo fisso".</p>
+      <p style="margin-top:8px">📌 <strong>Pranzo</strong> : la formule du midi est le meilleur rapport qualité/prix. Cherchez "menù del giorno".</p>
     </div>
     <div class="card">
       <h3>Quartiers pour manger bien et pas cher</h3>
@@ -555,25 +545,25 @@ td { color: var(--text-muted); }
     <button class="fav-btn" onclick="toggleFav(this,'Tri des déchets Milan')">☆</button>
     <h3>Tri des déchets à Milan</h3>
     <table>
-      <tr><th>Flux</th><th>Conteneur</th><th>Contenu</th><th>Fréquence</th></tr>
-      <tr><td>Organico</td><td><span class="tag tag-green">Vert</span></td><td>Réste de nourriture, coquilles, marc de café</td><td>Quotidien</td></tr>
-      <tr><td>Indifferenziato</td><td><span class="tag tag-orange">Gris</span></td><td>Non recyclable (coton, plastiques souillés)</td><td>Hebdo</td></tr>
-      <tr><td>Vetro</td><td><span class="tag tag-blue">Vert foncé</span></td><td>Bouteilles, pots, vitres</td><td>Quotidien</td></tr>
-      <tr><td>Carta</td><td><span class="tag tag-blue">Bleu</span></td><td>Journal, cartons (aplatis), papier</td><td>Quotidien</td></tr>
-      <tr><td>Plastica</td><td><span class="tag tag-orange">Jaune</span></td><td>Bouteilles PET, flacons, emballages</td><td>Quotidien</td></tr>
-      <tr><td>Metalli</td><td><span class="tag tag-orange">Jaune</span></td><td>Boîtes, canettes, aluminium</td><td>Quotidien</td></tr>
+      <tr><th>Flux</th><th>Conteneur</th><th>Contenu</th></tr>
+      <tr><td>Organico</td><td><span class="tag tag-green">Vert</span></td><td>Réste de nourriture, coquilles, marc de café</td></tr>
+      <tr><td>Indifferenziato</td><td><span class="tag tag-orange">Gris</span></td><td>Non recyclable (coton, plastiques souillés)</td></tr>
+      <tr><td>Vetro</td><td><span class="tag tag-blue">Vert foncé</span></td><td>Bouteilles, pots, vitres</td></tr>
+      <tr><td>Carta</td><td><span class="tag tag-blue">Bleu</span></td><td>Journal, cartons (aplatis), papier</td></tr>
+      <tr><td>Plastica</td><td><span class="tag tag-orange">Jaune</span></td><td>Bouteilles PET, flacons, emballages</td></tr>
+      <tr><td>Metalli</td><td><span class="tag tag-orange">Jaune</span></td><td>Boîtes, canettes, aluminium</td></tr>
     </table>
-    <p style="margin-top:8px">📌 Les conteneurs sont dans les "isole ecologiche" (îlots de tri) de quartier. Horaires : voir panneau sur l'îlot.</p>
+    <p style="margin-top:8px">📌 Les conteneurs sont dans les "isole ecologiche" de quartier.</p>
   </div>
 
   <div class="card">
     <button class="fav-btn" onclick="toggleFav(this,'Pharmacies de garde')">☆</button>
     <h3>Pharmacies de garde</h3>
     <ul>
-      <li><strong>Comment trouver</strong> : app "Farmacie di turno" ou site <em>farmacie.milano</em></li>
+      <li><strong>Comment trouver</strong> : app "Farmacie di turno" ou site farmacie.milano</li>
       <li><strong>Téléphone</strong> : 02 77602 (annuaire pharmacies)</li>
       <li><strong>Horaires</strong> : les pharmacies de garde sont ouvertes 24h/24 le jour du tour</li>
-      <li><strong>En semaine</strong> : toutes les pharmacies sont ouvertes (8h30-19h30, certaines jusqu'à 21h)</li>
+      <li><strong>En semaine</strong> : toutes ouvertes (8h30-19h30, certaines jusqu'à 21h)</li>
     </ul>
   </div>
 
@@ -581,9 +571,9 @@ td { color: var(--text-muted); }
     <button class="fav-btn" onclick="toggleFav(this,'Laverie Milan')">☆</button>
     <h3>Laverie automatique</h3>
     <ul>
-      <li><strong>App</strong> : "Lava e Asciuga" ou "Lava" (localisation)</li>
-      <li><strong>Prix moyen</strong> : 3-5 € le cycle (machine à laver), 2-3 € (sèche-linge)</li>
-      <li><strong>Paiement</strong> : pièces (1€, 50c) ou carte (selon machine)</li>
+      <li><strong>App</strong> : "Lava" ou "Lava e Asciuga" (localisation)</li>
+      <li><strong>Prix moyen</strong> : 3-5 € le cycle, 2-3 € (sèche-linge)</li>
+      <li><strong>Paiement</strong> : pièces (1€, 50c) ou carte</li>
       <li><strong>Quartiers</strong> : Isola, Brera, Navigli, Lambrate</li>
     </ul>
   </div>
@@ -592,7 +582,7 @@ td { color: var(--text-muted); }
     <button class="fav-btn" onclick="toggleFav(this,'Services postaux')">☆</button>
     <h3>Bureaux de poste & Services</h3>
     <ul>
-      <li><strong>Poste principale</strong> : Piazza della Repubblica (horaires 8h30-13h30)</li>
+      <li><strong>Poste principale</strong> : Piazza della Repubblica (8h30-13h30)</li>
       <li><strong>Distributeurs</strong> : ATM, Intesa, UniCredit (partout)</li>
       <li><strong>Tabaccheria</strong> : timbres, tickets bus, photocopies</li>
       <li><strong>Photocopies</strong> : tabaccheria, libreria, ou "copisteria"</li>
@@ -612,7 +602,6 @@ td { color: var(--text-muted); }
       <tr><td>Urgence unique</td><td><strong>112</strong></td><td>Tout type d'urgence</td></tr>
       <tr><td>Samu / Ambulance</td><td><strong>118</strong></td><td>Urgence médicale</td></tr>
       <tr><td>Police</td><td><strong>113</strong></td><td>Voleur, agression</td></tr>
-      <tr><td>Carabiniers</td><td><strong>112</strong></td><td>Police militaire</td></tr>
       <tr><td>Feu / Secours</td><td><strong>115</strong></td><td>Incendie</td></tr>
       <tr><td>Guardia Medica</td><td><strong>118</strong></td><td>Médecin de garde (hors urgence)</td></tr>
     </table>
@@ -625,31 +614,29 @@ td { color: var(--text-muted); }
     <table>
       <tr><th>Hôpital</th><th>Quartier</th><th>Urgences</th></tr>
       <tr><td>Policlinico</td><td>Centrale</td><td>24h/24</td></tr>
-      <tr><td>Sacco (Ospedale Sacco)</td><td>Monza (nord)</td><td>24h/24</td></tr>
+      <tr><td>Sacco</td><td>Monza (nord)</td><td>24h/24</td></tr>
       <tr><td>San Raffaele</td><td>Castellanza (est)</td><td>24h/24</td></tr>
       <tr><td>Niguarda</td><td>Lambrate</td><td>24h/24</td></tr>
       <tr><td>Buzzi</td><td>CityLife (nord)</td><td>24h/24</td></tr>
     </table>
-    <p style="margin-top:8px">📌 Pour une urgence : <strong>118</strong>. Pour un rendez-vous : <strong>118</strong> (Guardia Medica) ou le <strong>medico di base</strong>.</p>
   </div>
 
   <div class="card">
     <button class="fav-btn" onclick="toggleFav(this,'Médecin de garde')">☆</button>
     <h3>Médecin de garde (Guardia Medica)</h3>
     <ul>
-      <li><strong>Hors urgence vitale</strong> : appelez le <strong>118</strong> et demandez "Guardia Medica"</li>
+      <li><strong>Hors urgence vitale</strong> : appelez le <strong>118</strong> → "Guardia Medica"</li>
       <li><strong>Horaires</strong> : 15h-8h (jours ouvrés), 8h-8h (weekends/fériés)</li>
-      <li><strong>Coût</strong> : ~25-35 € (ticket de moduli, déductible)</li>
-      <li><strong>Localisation</strong> : le numéro 118 vous donne l'adresse de la Guardia du jour</li>
+      <li><strong>Coût</strong> : ~25-35 €</li>
     </ul>
   </div>
 
   <div class="card">
     <h3>Documents utiles</h3>
     <ul>
-      <li><strong>Carte Européenne d'Assurance Maladie (CEAM)</strong> : à demander avant le départ (CPAM)</li>
-      <li><strong>Assurance voyage</strong> : vérifiez qu'elle couvre l'Italie</li>
-      <li><strong>Ordonnances</strong> : gardez l'original + traduction si possible</li>
+      <li><strong>CEAM</strong> : à demander avant le départ (CPAM)</li>
+      <li><strong>Assurance voyage</strong> : vérifiez la couverture Italie</li>
+      <li><strong>Ordonnances</strong> : gardez l'original + traduction</li>
       <li><strong>Vaccins</strong> : hépatite A/B, tétanos (rappel)</li>
     </ul>
   </div>
@@ -674,22 +661,21 @@ td { color: var(--text-muted); }
         <tr><th>Musée</th><th>Tarif</th><th>Horaires</th><th>Gratuit</th></tr>
         <tr><td>Pinacoteca di Brera</td><td>15 €</td><td>9h-19h30 (mar-dim)</td><td>1er dim/mois</td></tr>
         <tr><td>Galleria Sforza</td><td>10 €</td><td>9h-17h15</td><td>1er dim/mois</td></tr>
-        <tr><td>Castello Sforzes
         <tr><td>Castello Sforzesco</td><td>10 €</td><td>9h-17h</td><td>1er dim/mois</td></tr>
         <tr><td>Museum of Science</td><td>15 €</td><td>10h-18h</td><td>1er dim/mois</td></tr>
         <tr><td>Triennale</td><td>8 €</td><td>10h-18h</td><td>1er dim/mois</td></tr>
         <tr><td>DUOMO (intérieur)</td><td>14 €</td><td>9h30-19h</td><td>—</td></tr>
         <tr><td>DUOMO (terrasse)</td><td>22 €</td><td>9h30-19h</td><td>—</td></tr>
       </table>
-      <p style="margin-top:8px">📌 <strong>1er dimanche du mois</strong> : gratuit dans les musées municipaux. Achetez vos billets en ligne pour éviter la file.</p>
+      <p style="margin-top:8px">📌 <strong>1er dimanche du mois</strong> : gratuit dans les musées municipaux.</p>
     </div>
     <div class="card">
-      <h3>Astuce : Milan Card</h3>
+      <h3>Milan Card</h3>
       <ul>
         <li><strong>72h</strong> : 75 € (transports illimités + 30 musées)</li>
         <li><strong>5 jours</strong> : 95 €</li>
         <li><strong>10 jours</strong> : 125 €</li>
-        <li>📌 Rentabilisable si vous visitez 4-5 musées + transports</li>
+        <li>📌 Rentabilisable si 4-5 musées + transports</li>
       </ul>
     </div>
   </div>
@@ -699,32 +685,32 @@ td { color: var(--text-muted); }
       <button class="fav-btn" onclick="toggleFav(this,'Événements Milan')">☆</button>
       <h3>Événements récurrents</h3>
       <ul>
-        <li><strong>Settimana della Moda</strong> : septembre & février (semaine de la mode)</li>
-        <li><strong>Fiera del Libro</strong> : mai (foire du livre)</li>
-        <li><strong>Palio di Milano</strong> : septembre (course de chevaux)</li>
-        <li><strong>San Giovanni</strong> : 24 juin (feux de Saint-Jean, Duomo)</li>
-        <li><strong>Immacolata</strong> : 8 décembre (marchés de Noël, illuminations)</li>
-        <li><strong>Ciné plein air</strong> : été, parcs (Parco Sempione, Giardini Indro Montanelli)</li>
+        <li><strong>Settimana della Moda</strong> : septembre & février</li>
+        <li><strong>Fiera del Libro</strong> : mai</li>
+        <li><strong>Palio di Milano</strong> : septembre</li>
+        <li><strong>San Giovanni</strong> : 24 juin (feux, Duomo)</li>
+        <li><strong>Immacolata</strong> : 8 décembre (marchés de Noël)</li>
+        <li><strong>Ciné plein air</strong> : été, parcs</li>
       </ul>
     </div>
     <div class="card">
       <h3>Gratuit ou pas cher</h3>
       <ul>
-        <li><strong>Concerts gratuits</strong> : Piazza del Duomo (événements), Parco Sempione (été)</li>
-        <li><strong>Visites guidées</strong> : "Free Walking Tour" (plusieurs opérateurs, pourboire)</li>
-        <li><strong>Expos temporaires</strong> : Triennale, Palazzo Reale (tarif réduit le soir)</li>
-        <li><strong>Chapelles</strong> : San Marco, Santa Maria delle Grazie (La Cène, réservation obligatoire)</li>
+        <li><strong>Concerts gratuits</strong> : Piazza del Duomo, Parco Sempione (été)</li>
+        <li><strong>Free Walking Tour</strong> : plusieurs opérateurs, pourboire</li>
+        <li><strong>Chapelles</strong> : San Marco, Santa Maria delle Grazie (La Cène, RDV obligatoire)</li>
       </ul>
     </div>
   </div>
 
   <div id="sub-balades" style="display:none">
     <div class="card">
+      <button class="fav-btn" onclick="toggleFav(this
       <button class="fav-btn" onclick="toggleFav(this,'Balades Milan')">☆</button>
       <h3>Itinéraires de balade</h3>
       <ul>
-        <li><strong>Navigli</strong> (2h) : du canal Grande au canal Piccolo, bars et restaurants</li>
-        <li><strong>Parco Sempione</strong> (1h30) : du Duomo au Castello, allées ombragées</li>
+        <li><strong>Navigli</strong> (2h) : canal Grande → canal Piccolo, bars et restaurants</li>
+        <li><strong>Parco Sempione</strong> (1h30) : Duomo → Castello, allées ombragées</li>
         <li><strong>Brera</strong> (1h30) : rues pavées, cafés, Pinacoteca</li>
         <li><strong>Isola</strong> (1h) : quartier alternatif, street art, bars</li>
         <li><strong>CityLife</strong> (1h) : tour, parc, architecture moderne</li>
@@ -734,7 +720,7 @@ td { color: var(--text-muted); }
     <div class="card">
       <h3>À la journée (trains régionaux)</h3>
       <ul>
-        <li><strong>Côme</strong> : 40 min (lago, funiculaire au Monte Brione)</li>
+        <li><strong>Côme</strong> : 40 min (lago, funiculaire Monte Brione)</li>
         <li><strong>Bergame</strong> : 1h (Città Alta, chocolat)</li>
         <li><strong>Lac Majeur</strong> : 1h15 (Bellagio, Stresa)</li>
         <li><strong>Varèse</strong> : 40 min (Parco Monte San Giorgio)</li>
@@ -748,13 +734,13 @@ td { color: var(--text-muted); }
       <button class="fav-btn" onclick="toggleFav(this,'Opéra et théâtre')">☆</button>
       <h3>Opéra & Théâtre</h3>
       <table>
-        <tr><th>Lieu</th><th>Spécialité</th><th>Tarif</th><th>Site</th></tr>
-        <tr><td>Teatro alla Scala</td><td>Opéra, ballet</td><td>20-250 €</td><td>teatroallascala.org</td></tr>
-        <tr><td>Teatro Lirico</td><td>Opéra (salle 2)</td><td>15-80 €</td><td>—</td></tr>
-        <tr><td>Teatro Dal Verme</td><td>Ballet, opéra</td><td>15-60 €</td><td>—</td></tr>
-        <tr><td>Teatro Piccolo</td><td>Théâtre</td><td>15-40 €</td><td>—</td></tr>
+        <tr><th>Lieu</th><th>Spécialité</th><th>Tarif</th></tr>
+        <tr><td>Teatro alla Scala</td><td>Opéra, ballet</td><td>20-250 €</td></tr>
+        <tr><td>Teatro Lirico</td><td>Opéra (salle 2)</td><td>15-80 €</td></tr>
+        <tr><td>Teatro Dal Verme</td><td>Ballet, opéra</td><td>15-60 €</td></tr>
+        <tr><td>Teatro Piccolo</td><td>Théâtre</td><td>15-40 €</td></tr>
       </table>
-      <p style="margin-top:8px">📌 <strong>Scala</strong> : les "poltroncine" (sièges en bois) sont à 20-30 € et offrent une bonne acoustique. Achetez en ligne 2-3 semaines à l'avance.</p>
+      <p style="margin-top:8px">📌 <strong>Scala</strong> : les "poltroncine" (sièges en bois) sont à 20-30 €. Achetez en ligne 2-3 semaines à l'avance.</p>
     </div>
   </div>
 </div>
@@ -774,7 +760,7 @@ td { color: var(--text-muted); }
       <button class="fav-btn" onclick="toggleFav(this,'Phrases essentielles')">☆</button>
       <h3>Politesse & Général</h3>
       <ul>
-        <li>Bonjour → <strong>Buongiorno</strong> (matin) / <strong>Buonasera</strong> (soir)</li>
+        <li>Bonjour → <strong>Buongiorno</strong> / <strong>Buonasera</strong></li>
         <li>Merci → <strong>Grazie</strong> / Merci beaucoup → <strong>Grazie mille</strong></li>
         <li>S'il vous plaît → <strong>Per favore</strong></li>
         <li>Oui / Non → <strong>Sì / No</strong></li>
@@ -786,13 +772,13 @@ td { color: var(--text-muted); }
       </ul>
     </div>
     <div class="card">
-      <button class="fav-btn" onclick="toggleFav(this,'Phrases pharmacie/médecin')">☆</button>
+      <button class="fav-btn" onclick="toggleFav(this,'Phrases pharmacie')">☆</button>
       <h3>Pharmacie & Médecin</h3>
       <ul>
-        <li>J'ai mal à... → <strong>Ho mal di...</strong> (testa=tête, pancia=ventre, gola=gorge)</li>
+        <li>J'ai mal à... → <strong>Ho mal di...</strong> (testa, pancia, gola)</li>
         <li>J'ai de la fièvre → <strong>Ho la febbre</strong></li>
         <li>J'ai besoin d'un médicament → <strong>Ho bisogno di un medicinale</strong></li>
-        <li>Suis-je allergique à... → <strong>Sono allergico/a a...</strong></li>
+        <li>Suis-je allergique → <strong>Sono allergico/a a...</strong></li>
         <li>Je prends des médicaments → <strong>Prendo dei medicinali</strong></li>
         <li>Un rendez-vous → <strong>Un appuntamento</strong></li>
       </ul>
@@ -803,23 +789,21 @@ td { color: var(--text-muted); }
       <ul>
         <li>Une table pour... → <strong>Un tavolo per...</strong></li>
         <li>Le menu du jour ? → <strong>Il menù del giorno?</strong></li>
-        <li>Je voudrais... → <strong>Avrei...</strong> (ou <strong>Vorrei...</strong>)</li>
+        <li>Je voudrais... → <strong>Avrei...</strong></li>
         <li>L'addition, s'il vous plaît → <strong>Il conto, per favore</strong></li>
         <li>C'est délicieux → <strong>È delizioso</strong></li>
-        <li>Un café → <strong>Un caffè</strong> / Un cappuccino → <strong>Un cappuccino</strong></li>
         <li>À emporter → <strong>Da portare via</strong></li>
       </ul>
     </div>
     <div class="card">
-      <button class="fav-btn" onclick="toggleFav(this,'Phrases administration')">☆</button>
+      <button class="fav-btn" onclick="toggleFav(this,'Phrases admin')">☆</button>
       <h3>Administration & Poste</h3>
       <ul>
         <li>J'ai un rendez-vous → <strong>Ho un appuntamento</strong></li>
         <li>Quel document faut-il ? → <strong>Quale documento serve?</strong></li>
         <li>Un timbre → <strong>Un francobollo</strong></li>
         <li>Une recommandée → <strong>Una raccomandata</strong></li>
-        <li>Je voudrais ouvrir un compte → <strong>Vorrei aprire un conto</strong></li>
-        <li>Le formulaire ? → <strong>Il modulo?</strong></li>
+        <li>Ouvrir un compte → <strong>Vorrei aprire un conto</strong></li>
       </ul>
     </div>
   </div>
@@ -856,7 +840,7 @@ td { color: var(--text-muted); }
 
   <div id="sub-nombres" style="display:none">
     <div class="card">
-      <button class="fav-btn" onclick="toggleFav(this,'Nombres et dates')">☆</button>
+      <button class="fav-btn" onclick="toggleFav(this,'Nombres')">☆</button>
       <h3>Nombres</h3>
       <table>
         <tr><td>1 uno</td><td>6 sei</td><td>11 undici</td><td>16 sedici</td></tr>
@@ -865,7 +849,7 @@ td { color: var(--text-muted); }
         <tr><td>4 quattro</td><td>9 nove</td><td>14 quattordici</td><td>19 diciannove</td></tr>
         <tr><td>5 cinque</td><td>10 dieci</td><td>20 venti</td><td>30 trenta</td></tr>
       </table>
-      <p style="margin-top:8px">40 = quaranta, 50 = cinquanta, 100 = cento, 1000 = mille</p>
+      <p style="margin-top:8px">40 quaranta · 50 cinquanta · 100 cento · 1000 mille</p>
     </div>
     <div class="card">
       <h3>Jours & Mois</h3>
@@ -907,20 +891,20 @@ td { color: var(--text-muted); }
     <h3>Climat par saison</h3>
     <table>
       <tr><th>Saison</th><th>Températures</th><th>Conseils</th></tr>
-      <tr><td>Hiver (nov-fév)</td><td>2° à 10°</td><td>Brouillard fréquent, manteau, parapluie</td></tr>
+      <tr><td>Hiver (nov-fév)</td><td>2° à 10°</td><td>Brouillard, manteau, parapluie</td></tr>
       <tr><td>Printemps (mars-mai)</td><td>10° à 20°</td><td>Pluies passagères, veste légère</td></tr>
-      <tr><td>Été (juin-août)</td><td>20° à 35°</td><td>Chaleur, canicule possible, eau</td></tr>
-      <tr><td>Automne (sept-nov)</td><td>10° à 22°</td><td>Pluies, brouillard en novembre</td></tr>
+      <tr><td>Été (juin-août)</td><td>20° à 35°</td><td>Chaleur, canicule possible</td></tr>
+      <tr><td>Automne (sept-nov)</td><td>10° à 22°</td><td>Pluies, brouillard en nov.</td></tr>
     </table>
   </div>
 
   <div class="card">
     <h3>Alertes spécifiques</h3>
     <ul>
-      <li><strong>Brouillard</strong> : très fréquent en hiver (déc-fév), réduit la visibilité</li>
-      <li><strong>Canicule</strong> : juillet-août, peut dépasser 38°, alerte "codice rosso"</li>
-      <li><strong>Pluies d'orage</strong> : printemps et été, orages violents possibles</li>
-      <li><strong>Neige</strong> : rare en centre-ville, possible en hiver (1-2 jours/an)</li>
+      <li><strong>Brouillard</strong> : très fréquent en hiver (déc-fév)</li>
+      <li><strong>Canicule</strong> : juil-août, peut dépasser 38°</li>
+      <li><strong>Orages</strong> : printemps/été, violents possibles</li>
+      <li><strong>Neige</strong> : rare en centre-ville (1-2 jours/an)</li>
     </ul>
   </div>
 </div>
@@ -932,14 +916,14 @@ td { color: var(--text-muted); }
   <div class="card">
     <button class="fav-btn" onclick="toggleFav(this,'Checklist installation')">☆</button>
     <h3>Checklist d'installation</h3>
-    <div class="checklist-item"><input type="checkbox" id="chk1" onchange="saveChecklist()"><span>Permis de séjour / carte d'identité européenne</span></div>
-    <div class="checklist-item"><input type="checkbox" id="chk2" onchange="saveChecklist()"><span>Codice fiscale (bureau des impôts / CAF)</span></div>
+    <div class="checklist-item"><input type="checkbox" id="chk1" onchange="saveChecklist()"><span>Permis de séjour / carte d'identité</span></div>
+    <div class="checklist-item"><input type="checkbox" id="chk2" onchange="saveChecklist()"><span>Codice fiscale (CAF)</span></div>
     <div class="checklist-item"><input type="checkbox" id="chk3" onchange="saveChecklist()"><span>Compte bancaire italien</span></div>
-    <div class="checklist-item"><input type="checkbox" id="chk4" onchange="saveChecklist()"><span>Carte SIM italienne (TIM, Vodafone, Wind, Iliad)</span></div>
-    <div class="checklist-item"><input type="checkbox" id="chk5" onchange="saveChecklist()"><span>Carte Européenne d'Assurance Maladie (CEAM)</span></div>
+    <div class="checklist-item"><input type="checkbox" id="chk4" onchange="saveChecklist()"><span>Carte SIM italienne</span></div>
+    <div class="checklist-item"><input type="checkbox" id="chk5" onchange="saveChecklist()"><span>CEAM (Carte Européenne Assurance Maladie)</span></div>
     <div class="checklist-item"><input type="checkbox" id="chk6" onchange="saveChecklist()"><span>Enregistrement en mairie (Residenza)</span></div>
     <div class="checklist-item"><input type="checkbox" id="chk7" onchange="saveChecklist()"><span>Médecin traitant (Medico di base)</span></div>
-    <div class="checklist-item"><input type="checkbox" id="chk8" onchange="saveChecklist()"><span>Contrat d'électricité / gaz</span></div>
+    <div class="checklist-item"><input type="checkbox" id="chk8" onchange="saveChecklist()"><span>Contrat électricité / gaz</span></div>
     <div class="checklist-item"><input type="checkbox" id="chk9" onchange="saveChecklist()"><span>Abonnement internet</span></div>
     <div class="checklist-item"><input type="checkbox" id="chk10" onchange="saveChecklist()"><span>Assurance habitation</span></div>
   </div>
@@ -948,14 +932,14 @@ td { color: var(--text-muted); }
     <button class="fav-btn" onclick="toggleFav(this,'Bureaux administratifs')">☆</button>
     <h3>Bureaux administratifs</h3>
     <table>
-      <tr><th>Service</th><th>Où</th><th>Horaires</th></tr>
+      <tr><th>Service</th><th>Adresse</th><th>Horaires</th></tr>
       <tr><td>Comune (mairie)</td><td>Piazza Liberazione 6</td><td>9h-13h (lun-ven)</td></tr>
-      <tr><td>Questura (police)</td><td>Via Fatebenefratelli 17</td><td>8h30-13h (lun-ven)</td></tr>
+      <tr><td>Questura</td><td>Via Fatebenefratelli 17</td><td>8h30-13h (lun-ven)</td></tr>
       <tr><td>Ufficio Postale</td><td>Piazza Repubblica 22</td><td>8h30-13h30 (lun-sam)</td></tr>
-      <tr><td>CAF (codice fiscale)</td><td>Plusieurs bureaux</td><td>9h-16h (lun-ven)</td></tr>
-      <tr><td>INPS (sécurité sociale)</td><td>Via Corridoni 18</td><td>9h-13h (lun-ven)</td></tr>
+      <tr><td>CAF</td><td>Plusieurs bureaux</td><td>9h-16h (lun-ven)</td></tr>
+      <tr><td>INPS</td><td>Via Corridoni 18</td><td>9h-13h (lun-ven)</td></tr>
     </table>
-    <p style="margin-top:8px">📌 Prenez toujours RDV en ligne si possible. Les files d'attente peuvent être longues.</p>
+    <p style="margin-top:8px">📌 Prenez RDV en ligne si possible.</p>
   </div>
 
   <div class="card">
@@ -963,10 +947,10 @@ td { color: var(--text-muted); }
     <h3>Carte SIM & Téléphone</h3>
     <ul>
       <li><strong>Opérateurs</strong> : TIM, Vodafone, Wind Tre, Iliad, Ho.</li>
-      <li><strong>Où acheter</strong> : boutiques opérateur, tabaccheria, supermarché</li>
-      <li><strong>Pièce requise</strong> : passeport ou carte d'identité + codice fiscale</li>
-      <li><strong>Budget</strong> : ~10-20 €/mois pour 10-20 Go + appels illimités</li>
-      <li><strong>Alternative</strong> : eSIM (Airalo, Holafly) pour un séjour &lt; 3 mois</li>
+      <li><strong>Où acheter</strong> : boutiques, tabaccheria, supermarché</li>
+      <li><strong>Pièce requise</strong> : passeport + codice fiscale</li>
+      <li><strong>Budget</strong> : ~10-20 €/mois (10-20 Go + appels illimités)</li>
+      <li><strong>Alternative</strong> : eSIM (Airalo, Holafly) pour &lt; 3 mois</li>
     </ul>
   </div>
 
@@ -974,10 +958,31 @@ td { color: var(--text-muted); }
     <h3>Échéances à surveiller</h3>
     <ul>
       <li><strong>Permis de séjour</strong> : renouveler avant expiration</li>
-      <li><strong>Contrat de bail</strong> : relire les clauses (dépot, charges)</li>
+      <li><strong>Contrat de bail</strong> : relire les clauses</li>
       <li><strong>Assurance</strong> : vérifier la couverture annuelle</li>
-      <li><strong>Taxes municipales</strong> : TARI (ordures), IMU (si propriétaire)</li>
+      <li><strong>Taxes</strong> : TARI (ordures), IMU (si propriétaire)</li>
     </ul>
+  </div>
+</div>
+
+<!-- ===== MODULE 9: CARTE ===== -->
+<div class="section" id="sec-carte">
+  <h2 class="section-title">🗺️ Carte de Milan</h2>
+
+  <div class="map-filters">
+    <button class="map-filter-btn active" onclick="filterMap('all',this)">Tout</button>
+    <button class="map-filter-btn" onclick="filterMap('metro',this)">🚇 Métro</button>
+    <button class="map-filter-btn" onclick="filterMap('marche',this)">🛒 Marchés</button>
+    <button class="map-filter-btn" onclick="filterMap('musee',this)">🎨 Musées</button>
+    <button class="map-filter-btn" onclick="filterMap('hopital',this)">🏥 Hôpitaux</button>
+    <button class="map-filter-btn" onclick="filterMap('parc',this)">🌳 Parcs</button>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="card">
+    <h3>Astuce</h3>
+    <p>Touche un point pour voir le nom. Utilise les filtres pour n'afficher qu'un type de lieu.</p>
   </div>
 </div>
 
@@ -1002,8 +1007,8 @@ td { color: var(--text-muted); }
     <button class="nav-btn" onclick="showSection('langue',this)"><span class="icon">🗣️</span>Langue</button>
     <button class="nav-btn" onclick="showSection('meteo',this)"><span class="icon">🌤️</span>Météo</button>
     <button class="nav-btn" onclick="showSection('admin',this)"><span class="icon">📋</span>Admin</button>
+    <button class="nav-btn" onclick="showSection('carte',this)"><span class="icon">🗺️</span>Carte</button>
     <button class="nav-btn" onclick="showSection('favoris',this)"><span class="icon">⭐</span>Favoris</button>
-    <button class="nav-btn" onclick="showSection('transport',this)"><span class="icon">📍</span>Retour</button>
   </div>
 </nav>
 
@@ -1016,6 +1021,7 @@ function showSection(id, btn) {
   if (btn) btn.classList.add('active');
   if (id === 'meteo') loadWeather();
   if (id === 'favoris') renderFavs();
+  if (id === 'carte') setTimeout(() => { initMap(); map.invalidateSize(); }, 150);
 }
 
 function showSub(btn, id) {
@@ -1034,24 +1040,19 @@ const searchResultsList = document.getElementById('searchResultsList');
 searchInput.addEventListener('input', function() {
   const q = this.value.toLowerCase().trim();
   if (q.length < 2) { closeSearch(); return; }
-  
   const cards = document.querySelectorAll('.card');
   let results = [];
   cards.forEach(card => {
     const text = card.textContent.toLowerCase();
     if (text.includes(q)) {
-      const title = card.querySelector('h3, h4') ? card.querySelector('h3, h4').textContent : '';
+      const title = card.querySelector('h3') ? card.querySelector('h3').textContent : '';
       const section = card.closest('.section').id.replace('sec-', '');
-      results.push({ title, section, card });
+      results.push({ title, section });
     }
   });
-  
   if (results.length > 0) {
-    searchResultsList.innerHTML = results.map(r => 
-      `<div class="card" onclick="goToCard('${r.section}')">
-        <h3>${r.title}</h3>
-        <p>Module: ${r.section}</p>
-      </div>`
+    searchResultsList.innerHTML = results.map(r =>
+      '<div class="card" onclick="goToCard(\'' + r.section + '\')"><h3>' + r.title + '</h3><p>Module: ' + r.section + '</p></div>'
     ).join('');
   } else {
     searchResultsList.innerHTML = '<div class="no-results">Aucun résultat pour "' + q + '"</div>';
@@ -1092,27 +1093,8 @@ function renderFavs() {
     list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">Aucun favori pour le moment.<br>Touchez ☆ sur une carte pour l\'ajouter.</p>';
     return;
   }
-  list.innerHTML = favs.map(f => `<div class="card"><h3>★ ${f}</h3></div>`).join('');
+  list.innerHTML = favs.map(f => '<div class="card"><h3>★ ' + f + '</h3></div>').join('');
 }
-
-// Restore fav states on load
-document.addEventListener('DOMContentLoaded', () => {
-  const favs = JSON.parse(localStorage.getItem('milan_favs') || '[]');
-  document.querySelectorAll('.fav-btn').forEach(btn => {
-    const name = btn.getAttribute('onclick').match(/'([^']+)'/);
-    if (name && favs.includes(name[1])) {
-      btn.classList.add('active');
-      btn.textContent = '★';
-    }
-  });
-  // Restore checklist
-  for (let i = 1; i <= 10; i++) {
-    const el = document.getElementById('chk' + i);
-    if (el) el.checked = localStorage.getItem('chk' + i) === '1';
-  }
-  // Show first section
-  showSection('transport', document.querySelector('.nav-btn'));
-});
 
 // ===== CHECKLIST =====
 function saveChecklist() {
@@ -1135,15 +1117,107 @@ async function loadWeather() {
     document.getElementById('weatherHumidity').textContent = '💧 ' + c.relative_humidity_2m + '%';
     document.getElementById('weatherWind').textContent = '💨 ' + Math.round(c.wind_speed_10m) + ' km/h';
     document.getElementById('weatherFeels').textContent = '🌡️ ' + Math.round(c.apparent_temperature) + '°';
-    
-    const codes = {0:'Ensoleillé',1:'Partiellement nuageux',2:'Nuageux',3:'Couvert',45:'Brouillard',48:'Brouillard givrant',51:'Bruine légère',53:'Bruine',55:'Bruine forte',61:'Pluie légère',63:'Pluie',65:'Pluie forte',71:'Neige légère',73:'Neige',75:'Neige forte',80:'Averses légères',81:'Averses',82:'Averses violentes',95:'Orage',96:'Orage avec grêle',99:'Orage violent'};
+    const codes = {0:'Ensoleillé',1:'Partiellement nuageux',2:'Nuageux',3:'Couvert',45:'Brouillard',48:'Brouillard givrant',51:'Bruine légère',53:'Bruine',55:'Bruine forte',61:'Pluie légère',63:'Pluie',65:'Pluie forte',71:'Neige légère',73:'Neige',75:'Neige forte',80:'Averses légères',81:'Averses',82:'Averses violentes',95:'Orage',96:'Orage grêle',99:'Orage violent'};
     document.getElementById('weatherDesc').textContent = codes[c.weather_code] || 'Météo';
   } catch(e) {
     document.getElementById('weatherDesc').textContent = 'Météo indisponible (hors-ligne?)';
   }
 }
 
-// ===== SERVICE WORKER REGISTRATION =====
+// ===== MAP =====
+let map = null;
+let markers = [];
+let mapInitialized = false;
+
+const mapData = [
+  { lat: 45.4642, lng: 9.1916, name: "Duomo (M1+M2)", cat: "metro" },
+  { lat: 45.4787, lng: 9.1880, name: "Centrale (M1+M2)", cat: "metro" },
+  { lat: 45.4865, lng: 9.1920, name: "Porta Garibaldi (M2+M3+M5)", cat: "metro" },
+  { lat: 45.5198, lng: 9.2247, name: "Lambrate (M2+M5)", cat: "metro" },
+  { lat: 45.4735, lng: 9.1580, name: "San Siro (M5)", cat: "metro" },
+  { lat: 45.4570, lng: 9.1900, name: "Rogoredo (M3)", cat: "metro" },
+  { lat: 45.4715, lng: 9.1860, name: "Marché Ortolani (Brera)", cat: "marche" },
+  { lat: 45.4890, lng: 9.2100, name: "Marché Trambacchi (Lambrate)", cat: "marche" },
+  { lat: 45.4750, lng: 9.2000, name: "Marché Porta Genova (Isola)", cat: "marche" },
+  { lat: 45.4550, lng: 9.1950, name: "Marché Porta Romana", cat: "marche" },
+  { lat: 45.4713, lng: 9.1880, name: "Pinacoteca di Brera", cat: "musee" },
+  { lat: 45.4755, lng: 9.1860, name: "Castello Sforzesco", cat: "musee" },
+  { lat: 45.4635, lng: 9.1910, name: "Duomo (intérieur)", cat: "musee" },
+  { lat: 45.4915, lng: 9.1920, name: "Triennale di Milano", cat: "musee" },
+  { lat: 45.4640, lng: 9.1890, name: "Galleria Vittorio Emanuele", cat: "musee" },
+  { lat: 45.4750, lng: 9.1950, name: "Policlinico", cat: "hopital" },
+  { lat: 45.4950, lng: 9.2100, name: "Niguarda", cat: "hopital" },
+  { lat: 45.4850, lng: 9.1650, name: "Buzzi (CityLife)", cat: "hopital" },
+  { lat: 45.4620, lng: 9.1850, name: "Parco Sempione", cat: "parc" },
+  { lat: 45.4850, lng: 9.1750, name: "Giardini Indro Montanelli", cat: "parc" },
+  { lat: 45.4580, lng: 9.1950, name: "Parco delle Cave", cat: "parc" },
+  { lat: 45.4700, lng: 9.2100, name: "Navigli (Canal Grande)", cat: "parc" }
+];
+
+const catColors = {
+  metro: '#4fc3f7',
+  marche: '#81c784',
+  musee: '#ffb74d',
+  hopital: '#ef5350',
+  parc: '#66bb6a'
+};
+
+function initMap() {
+  if (mapInitialized) return;
+  map = L.map('map').setView([45.4654, 9.19], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+  renderMarkers('all');
+  mapInitialized = true;
+}
+
+function renderMarkers(filter) {
+  if (!map) return;
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  mapData.forEach(d => {
+    if (filter === 'all' || d.cat === filter) {
+      const marker = L.circleMarker([d.lat, d.lng], {
+        radius: 8,
+        fillColor: catColors[d.cat],
+        color: '#fff',
+        weight: 1,
+        fillOpacity: 0.8
+      }).addTo(map);
+      marker.bindPopup('<strong>' + d.name + '</strong>');
+      markers.push(marker);
+    }
+  });
+}
+
+function filterMap(cat, btn) {
+  document.querySelectorAll('.map-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMarkers(cat);
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  const favs = JSON.parse(localStorage.getItem('milan_favs') || '[]');
+  document.querySelectorAll('.fav-btn').forEach(btn => {
+    const match = btn.getAttribute('onclick').match(/'([^']+)'/);
+    if (match && favs.includes(match[1])) {
+      btn.classList.add('active');
+      btn.textContent = '★';
+    }
+  });
+  for (let i = 1; i <= 10; i++) {
+    const el = document.getElementById('chk' + i);
+    if (el) {
+      el.checked = localStorage.getItem('chk' + i) === '1';
+      if (el.checked) el.parentElement.classList.add('done');
+    }
+  }
+  showSection('transport', document.querySelector('.nav-btn'));
+});
+
+// ===== SERVICE WORKER =====
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
