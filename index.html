@@ -180,13 +180,15 @@ function vToday(){
  if(sd&&!a)h+=`<p class="sub">${sd} tâches sans date (dates d'arrivée/départ manquantes).</p>`;
  h+=`<h2>Ajouter une échéance</h2><div class="card"><input type="text" id="ct" placeholder="Ex : examen de Fisica"><input type="date" id="cd"><button class="btn" data-a="addcustom">Ajouter</button></div>`;
  return h}
-let SHOWHID=false;
+let SHOWHID=false,OPENPH=null;
 function vCheck(){
  let h='<h1>Démarches</h1><p class="sub">Les dates se calculent depuis tes dates d\'arrivée et de départ. « À vérifier » = confirme auprès de Polimi ou de l\'administration, je ne peux pas garantir ces points.</p>';
  Object.keys(PH).forEach(p=>{
   const l=TPL.filter(t=>t.phase===p&&!(S.tasks[t.id]||{}).hidden),dn=l.filter(t=>(S.tasks[t.id]||{}).done).length;
-  h+=`<h2>${PH[p]} · ${dn}/${l.length}</h2>`;
-  l.forEach(t=>{const st=S.tasks[t.id]||{},due=dueOf(t),late=due&&!st.done&&diff(due)<0;
+  if(OPENPH===null){const f=Object.keys(PH).find(k=>TPL.some(t=>t.phase===k&&!(S.tasks[t.id]||{}).hidden&&!(S.tasks[t.id]||{}).done));OPENPH=new Set(f?[f]:[])}
+  const op=OPENPH.has(p);
+  h+=`<button class="btn s" style="text-align:left;margin-top:12px" data-a="phtoggle" data-id="${p}">${esc(PH[p])} · ${dn}/${l.length}<span style="float:right;color:var(--mu)">${op?'−':'+'}</span></button>`;
+  if(op)l.forEach(t=>{const st=S.tasks[t.id]||{},due=dueOf(t),late=due&&!st.done&&diff(due)<0;
    h+=`<div class="card row ${st.done?'done':''}"><input type="checkbox" data-a="toggle" data-k="task" data-id="${t.id}" ${st.done?'checked':''}>
    <div class="grow"><div class="t">${esc(t.title)}</div>${t.d?`<div class="d">${esc(t.d)}</div>`:''}
    ${t.v?'<span class="chip w">à vérifier</span>':''}${late?'<span class="chip e">en retard</span>':''}</div>
@@ -534,6 +536,7 @@ document.addEventListener('click',e=>{
  if(a==='toggle')return; // géré par change
  if(a==='addcustom'){const t=document.getElementById('ct').value.trim(),d=document.getElementById('cd').value;
   if(!t){alert('Titre requis.');return}S.custom.push({id:uid(),title:t,due:d,done:false});save();render();return}
+ if(a==='phtoggle'){if(OPENPH.has(id))OPENPH.delete(id);else OPENPH.add(id);render();return}
  if(a==='showhid'){SHOWHID=!SHOWHID;render();return}
  if(a==='restoretask'){const o=Object.assign({},S.tasks[id]);delete o.hidden;S.tasks[id]=o;save();render();return}
  if(a==='deltask'){if(confirm('Supprimer cette démarche ?')){S.tasks[id]=Object.assign({},S.tasks[id],{hidden:true});save();render()}return}
