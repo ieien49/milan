@@ -133,7 +133,7 @@ const TPL=[
 {id:'d4',phase:'depart',rel:'departure',off:-14,title:'Clôturer / transférer le compte italien',d:""},
 {id:'d5',phase:'depart',rel:'departure',off:-7,v:1,title:'Certificate of departure signé',d:""},
 {id:'d6',phase:'depart',rel:'departure',off:-3,title:'État des lieux et restitution de la caution',d:""},
-{id:'d7',phase:'depart',rel:'departure',off:-1,title:'Exporter une sauvegarde de l\'app',d:"Réglages → Exporter (JSON)."},
+{id:'d7',phase:'depart',rel:'departure',off:-1,title:'Exporter une sauvegarde de l\'app',d:"Options → Exporter (JSON)."},
 {id:'d8',phase:'depart',rel:'departure',off:14,v:1,title:'Rapport / questionnaire final Erasmus',d:"Dans les semaines suivant le retour. Vérifie le délai."}
 ];
 const EMERG=[['112','Numéro d\'urgence unique'],['118','Urgences médicales'],['113','Police'],['115','Pompiers']];
@@ -164,7 +164,7 @@ function itemRow(i){
  ${i.kind==='custom'?`<button class="x" data-a="delcustom" data-id="${i.id}">${ic('x-mark',18)}</button>`:''}</div>`}
 function vToday(){
  const a=S.settings.arrival,dp=S.settings.departure;let hero='';
- if(!a)hero='<div class="hero">Renseigne tes dates dans Réglages pour calculer toutes les échéances.</div>';
+ if(!a)hero='<div class="hero">Renseigne tes dates dans Options pour calculer toutes les échéances.</div>';
  else{const n=diff(a);
   if(n>0)hero=`<div class="hero"><b>J-${n}</b>avant l'arrivée à Milan (${fmt(a)})</div>`;
   else if(dp&&diff(dp)>=0)hero=`<div class="hero"><b>${diff(dp)} jours</b>avant la fin du semestre (${fmt(dp)})</div>`;
@@ -173,7 +173,7 @@ function vToday(){
  const g=[['En retard',i=>diff(i.due)<0],['Cette semaine',i=>diff(i.due)>=0&&diff(i.due)<=7],['Ce mois-ci',i=>diff(i.due)>7&&diff(i.due)<=30],['Plus tard',i=>diff(i.due)>30]];
  let h=`<h1>Milano</h1><p class="sub">${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</p>${hero}${backupBanner()}`;
  g.forEach(([n,f])=>{const l=all.filter(f);if(l.length)h+=`<h2>${n} (${l.length})</h2>`+l.map(itemRow).join('')});
- if(!all.length)h+='<p class="sub">Aucune échéance datée. Définis tes dates dans Réglages.</p>';
+ if(!all.length)h+='<p class="sub">Aucune échéance datée. Définis tes dates dans Options.</p>';
  const sd=items().filter(i=>!i.due&&!i.done).length;
  if(sd&&!a)h+=`<p class="sub">${sd} tâches sans date (dates d'arrivée/départ manquantes).</p>`;
  h+=`<h2>Ajouter une échéance</h2><div class="card"><input type="text" id="ct" placeholder="Ex : examen de Fisica"><input type="date" id="cd"><button class="btn" data-a="addcustom">Ajouter</button></div>`;
@@ -270,7 +270,7 @@ function vVie(){
    if(g.notes)h+=g.notes.map(n=>`<p class="sub">${esc(n)}</p>`).join('')}});
  return h}
 function vSet(){
- let h=`<h1>Réglages</h1><h2>Dates</h2><div class="card"><label class="l">Arrivée à Milan</label><input type="date" data-c="set" data-f="arrival" value="${S.settings.arrival||''}">
+ let h=`<h1>Options</h1><h2>Dates</h2><div class="card"><label class="l">Arrivée à Milan</label><input type="date" data-c="set" data-f="arrival" value="${S.settings.arrival||''}">
  <label class="l">Fin du semestre / départ</label><input type="date" data-c="set" data-f="departure" value="${S.settings.departure||''}"></div>
  <h2>Rappels iPhone</h2><div class="card"><p class="d" style="margin:0 0 8px">L'app ne peut pas t'envoyer de notifications. Exporte les échéances dans le Calendrier iOS, qui enverra les rappels. Réexporte après avoir changé des dates.</p>
  <button class="btn" data-a="ics">Exporter vers le Calendrier (.ics)</button></div>
@@ -557,7 +557,7 @@ function backupBanner(){
 function render(){
  const y=window.scrollY;if(MAP){saveView();MAP.remove();MAP=null;ME=null;ADD=false}
  document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,set:vSet,map:vMap,vie:vVie}[tab]();document.getElementById('app').className=tab==='map'?'m':'';document.documentElement.classList.toggle('mapmode',tab==='map');
- document.getElementById('nav').innerHTML=[['today','home','Accueil'],['check','clipboard-document-check','Démarches'],['budget','banknotes','Budget'],['ital','language','Italien'],['map','map','Carte'],['vie','building-library','Pratique'],['set','cog-6-tooth','Réglages']]
+ document.getElementById('nav').innerHTML=[['today','home','Accueil'],['map','map','Carte'],['check','clipboard-document-check','Démarches'],['vie','building-library','Pratique'],['ital','language','Langue'],['budget','banknotes','Budget'],['set','cog-6-tooth','Options']]
   .map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}">${ic(i,24)}${l}</button>`).join('');
  window.scrollTo(0,y);if(tab==='map')initMap()}
 async function outFile(name,text,mime){
