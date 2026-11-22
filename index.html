@@ -352,9 +352,19 @@ function plist(){
  if(k&&!h)h='<p class="sub">Aucun résultat.</p>';
  return h}
 function vItal(){return `<h1>Italien</h1><p class="sub">Touche une phrase pour l'afficher en grand et la montrer. Le haut-parleur la lit à voix haute, l'étoile la garde en favori.</p><input type="text" id="pq" placeholder="Rechercher (français ou italien)" value="${esc(q)}"><div id="plist">${plist()}</div>`}
-function say(t){if(!('speechSynthesis' in window)){alert('Synthèse vocale indisponible.');return}
- speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='it-IT';u.rate=.9;
- const v=speechSynthesis.getVoices().find(x=>x.lang&&x.lang.replace('_','-').toLowerCase().startsWith('it'));if(v)u.voice=v;speechSynthesis.speak(u)}
+let UT=null,VOICES=[];
+function loadVoices(){try{VOICES=speechSynthesis.getVoices()||[]}catch(e){}}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+function say(t){
+ if(!('speechSynthesis' in window)){alert('Synthèse vocale indisponible.');return}
+ loadVoices();
+ const v=VOICES.find(x=>(x.lang||'').replace('_','-').toLowerCase().startsWith('it'));
+ if(VOICES.length&&!v){alert('Aucune voix italienne installée sur cet appareil.')}
+ const go=()=>{
+  const u=new SpeechSynthesisUtterance(t);u.lang='it-IT';u.rate=.9;if(v)u.voice=v;
+  u.onerror=e=>{if(e.error&&e.error!=='canceled'&&e.error!=='interrupted')alert('Lecture impossible : '+e.error)};
+  UT=u;speechSynthesis.resume();speechSynthesis.speak(u)};
+ if(speechSynthesis.speaking||speechSynthesis.pending){speechSynthesis.cancel();setTimeout(go,150)}else go()}
 let bm=iso(today()).slice(0,7);
 const CATS=['Loyer','Courses','Restau / bars','Transport','Téléphone / internet','Études','Loisirs / voyages','Santé','Autre'];
 const eur=n=>n.toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
