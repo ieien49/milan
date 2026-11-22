@@ -65,7 +65,7 @@ html.mapmode,html.mapmode body{overflow:hidden;height:100%;overscroll-behavior:n
 #map{height:calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom));min-height:300px;border-radius:14px;border:1px solid var(--bd);z-index:0}
 #mlines{position:absolute;top:8px;left:8px;z-index:900;display:flex;gap:4px}
 .lc{height:24px;padding:0 9px;font-size:11px;font-weight:700;border-radius:99px;border:1px solid var(--bd);background:var(--card);color:var(--mu);box-shadow:0 1px 3px rgba(0,0,0,.25)}
-.lc.sel{box-shadow:0 0 0 2px var(--tx)}
+.lc.sel,.cc.sel{box-shadow:0 0 0 2px var(--tx)}
 #mtools{position:absolute;top:8px;right:8px;z-index:900;display:flex;flex-direction:column;gap:8px}
 .mb{width:42px;height:42px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .mb.on{color:#1a73e8}
@@ -394,32 +394,33 @@ let SM=[];
 function stStyle(z){return z<=11?{r:2,w:1.5}:z===12?{r:3,w:2}:z===13?{r:4,w:2.5}:z===14?{r:5,w:3}:{r:6,w:3}}
 function restyleStations(){if(!MAP)return;const st=stStyle(MAP.getZoom());SM.forEach(m=>m.setStyle({weight:st.w}).setRadius(st.r))}
 function drawPlaces(){
- if(!MAP||!PLACEL)return;PLACEL.clearLayers();
+ if(!MAP||!PLACEL)return;PLACEL.clearLayers();if(PFOCUS&&catCount(PFOCUS)===0)PFOCUS=null;
  const pin=(n,col)=>L.divIcon({html:'<div class="mk" style="background:'+col+'">'+ic(n,16)+'</div>',className:'pin',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-14]});
- if(!HIDCAT.etudes)PRESET.forEach(([n,la,lo])=>L.marker([la,lo],{icon:pin(PCM.etudes.i,PCM.etudes.c)}).addTo(PLACEL).bindPopup(popupFor(n,PCM.etudes.l,la,lo)));
- S.places.forEach(p=>{const c=catOf(p);if(HIDCAT[c.k])return;
+ PRESET.forEach(([n,la,lo])=>L.marker([la,lo],{icon:pin(PCM.etudes.i,PCM.etudes.c),opacity:mo('etudes'),zIndexOffset:zo('etudes')}).addTo(PLACEL).bindPopup(popupFor(n,PCM.etudes.l,la,lo)));
+ S.places.forEach(p=>{const c=catOf(p);
   const ex=document.createElement('div');
   const sel=document.createElement('select');sel.style.cssText='width:100%;margin:6px 0 4px;padding:6px';
   PC.forEach(x=>{const o=document.createElement('option');o.value=x.k;o.textContent=x.l;if(x.k===c.k)o.selected=true;sel.appendChild(o)});
   sel.addEventListener('change',()=>{p.cat=sel.value;save();MAP.closePopup();drawPlaces();updateFilter()});
   ex.appendChild(sel);
   ex.appendChild(mkBtn('Supprimer ce lieu','btn r',()=>{if(confirm('Supprimer « '+p.name+' » ?')){S.places=S.places.filter(x=>x.id!==p.id);save();MAP.closePopup();drawPlaces();updateFilter()}}));
-  L.marker([p.lat,p.lon],{icon:pin(c.i,c.c)}).addTo(PLACEL).bindPopup(popupFor(p.name,c.l,p.lat,p.lon,ex))})}
+  L.marker([p.lat,p.lon],{icon:pin(c.i,c.c),opacity:mo(c.k),zIndexOffset:zo(c.k)}).addTo(PLACEL).bindPopup(popupFor(p.name,c.l,p.lat,p.lon,ex))})}
 function updateLines(){const el=document.getElementById('mlines');if(!el)return;const n=curNet();
  el.innerHTML=n?n.lines.map(l=>{const act=!FOCUS||FOCUS===l.ref;
   return `<button data-a="mline" data-v="${l.ref}" class="lc${FOCUS===l.ref?' sel':''}" style="${act?'background:'+l.col+';border-color:'+l.col+';color:'+(l.ref==='M3'?'#000':'#fff'):''}">${l.ref}</button>`}).join(''):''}
 let ADD=false;
 const PC=[{k:'resto',l:'Restaurant / café',s:'Resto',i:'cake',c:'#e67e22'},{k:'shop',l:'Magasin',s:'Magasin',i:'shopping-bag',c:'#2874a6'},{k:'sante',l:'Santé',s:'Santé',i:'heart',c:'#c0392b'},{k:'etudes',l:'Études',s:'Études',i:'academic-cap',c:'#1f7a4d'},{k:'log',l:'Logement',s:'Logement',i:'home-modern',c:'#8e44ad'},{k:'admin',l:'Administration',s:'Admin',i:'building-library',c:'#5d6d7e'},{k:'sortie',l:'Sorties / loisirs',s:'Sorties',i:'ticket',c:'#d81b7a'},{k:'autre',l:'Autre',s:'Autre',i:'map-pin',c:'#34495e'}];
 const PCM={};PC.forEach(c=>PCM[c.k]=c);
-let HIDCAT={},ADDCAT='resto';
+let PFOCUS=null,ADDCAT='resto';
+const mo=k=>!PFOCUS||PFOCUS===k?1:.3,zo=k=>PFOCUS===k?1000:0;
 function catOf(p){return PCM[p.cat]||PCM.autre}
 function catCount(k){let n=S.places.filter(p=>catOf(p).k===k).length;if(k==='etudes')n+=PRESET.length;return n}
 function updateCats(){const el=document.getElementById('mcats');if(!el)return;
  el.innerHTML=PC.map(c=>{const on=ADDCAT===c.k;return `<button class="cc" data-a="mpick" data-v="${c.k}" style="${on?'background:'+c.c+';border-color:'+c.c+';color:#fff':''}">${ic(c.i,16)}${c.s}</button>`}).join('')}
 function updateFilter(){const el=document.getElementById('mfilt');if(!el)return;
  const used=PC.filter(c=>catCount(c.k)>0);
- el.innerHTML=used.map(c=>{const vis=!HIDCAT[c.k];return `<button class="cc" data-a="mcat" data-v="${c.k}" style="${vis?'background:'+c.c+';border-color:'+c.c+';color:#fff':'opacity:.6'}">${ic(c.i,16)}${c.s} ${catCount(c.k)}</button>`}).join('')||'<span class="d">Aucun lieu</span>';
- const f=document.querySelector('[data-a=mfilter]');if(f)f.classList.toggle('on',PC.some(c=>HIDCAT[c.k]))}
+ el.innerHTML=used.map(c=>{const vis=!PFOCUS||PFOCUS===c.k;return `<button class="cc${PFOCUS===c.k?' sel':''}" data-a="mcat" data-v="${c.k}" style="${vis?'background:'+c.c+';border-color:'+c.c+';color:#fff':''}">${ic(c.i,16)}${c.s} ${catCount(c.k)}</button>`}).join('')||'<span class="d">Aucun lieu</span>';
+ const f=document.querySelector('[data-a=mfilter]');if(f)f.classList.toggle('on',!!PFOCUS)}
 function endAdd(){ADD=false;['mcross','mbar'].forEach(i=>{const e=document.getElementById(i);if(e)e.hidden=true})}
 const IC={
  loc:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
@@ -507,9 +508,9 @@ document.addEventListener('click',e=>{
  if(a==='mcancel'){endAdd();return}
  if(a==='mpick'){ADDCAT=b.dataset.v;updateCats();return}
  if(a==='mfilter'){const e=document.getElementById('mfilt');e.hidden=!e.hidden;if(!e.hidden)updateFilter();return}
- if(a==='mcat'){const k=b.dataset.v;HIDCAT[k]=!HIDCAT[k];updateFilter();drawPlaces();return}
+ if(a==='mcat'){const k=b.dataset.v;PFOCUS=PFOCUS===k?null:k;updateFilter();drawPlaces();return}
  if(a==='mok'){if(!MAP)return;const c=MAP.getCenter(),nm=(prompt('Nom du lieu ?')||'').trim();if(!nm)return;
-  S.places.push({id:uid(),name:nm,cat:ADDCAT,lat:Math.round(c.lat*1e5)/1e5,lon:Math.round(c.lng*1e5)/1e5});HIDCAT[ADDCAT]=false;save();endAdd();drawPlaces();updateFilter();return}
+  S.places.push({id:uid(),name:nm,cat:ADDCAT,lat:Math.round(c.lat*1e5)/1e5,lon:Math.round(c.lng*1e5)/1e5});PFOCUS=null;save();endAdd();drawPlaces();updateFilter();return}
  if(a==='mline'){const r=b.dataset.v;FOCUS=FOCUS===r?null:r;updateLines();drawNet();return}
  if(a==='mlocate'){if(MAP)MAP.locate({setView:true,maxZoom:16});return}
  if(a==='mrefresh'){if(confirm('Recharger le réseau depuis OpenStreetMap ?'))fetchNet();return}
