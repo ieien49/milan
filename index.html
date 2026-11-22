@@ -154,7 +154,7 @@ function rel(s){const n=diff(s);if(n===0)return"aujourd'hui";if(n===1)return'dem
 function dueOf(t){const o=(S.tasks[t.id]||{}).due;if(o)return o;const b=S.settings[t.rel];return b?iso(addD(parse(b),t.off)):''}
 function items(){
  const o=[];
- TPL.forEach(t=>{const st=S.tasks[t.id]||{};o.push({key:'task-'+t.id,kind:'task',id:t.id,title:t.title,due:dueOf(t),done:!!st.done,v:t.v})});
+ TPL.forEach(t=>{const st=S.tasks[t.id]||{};if(st.hidden)return;o.push({key:'task-'+t.id,kind:'task',id:t.id,title:t.title,due:dueOf(t),done:!!st.done,v:t.v})});
  S.custom.forEach(c=>o.push({key:'c-'+c.id,kind:'custom',id:c.id,title:c.title,due:c.due||'',done:!!c.done}));
  S.docs.forEach(d=>{if(d.expiry)o.push({key:'doc-'+d.id,kind:'doc',id:d.id,title:'Expiration : '+d.label,due:d.expiry,done:false})});
  return o}
@@ -180,16 +180,21 @@ function vToday(){
  if(sd&&!a)h+=`<p class="sub">${sd} tâches sans date (dates d'arrivée/départ manquantes).</p>`;
  h+=`<h2>Ajouter une échéance</h2><div class="card"><input type="text" id="ct" placeholder="Ex : examen de Fisica"><input type="date" id="cd"><button class="btn" data-a="addcustom">Ajouter</button></div>`;
  return h}
+let SHOWHID=false;
 function vCheck(){
  let h='<h1>Démarches</h1><p class="sub">Les dates se calculent depuis tes dates d\'arrivée et de départ. « À vérifier » = confirme auprès de Polimi ou de l\'administration, je ne peux pas garantir ces points.</p>';
  Object.keys(PH).forEach(p=>{
-  const l=TPL.filter(t=>t.phase===p),dn=l.filter(t=>(S.tasks[t.id]||{}).done).length;
+  const l=TPL.filter(t=>t.phase===p&&!(S.tasks[t.id]||{}).hidden),dn=l.filter(t=>(S.tasks[t.id]||{}).done).length;
   h+=`<h2>${PH[p]} · ${dn}/${l.length}</h2>`;
   l.forEach(t=>{const st=S.tasks[t.id]||{},due=dueOf(t),late=due&&!st.done&&diff(due)<0;
    h+=`<div class="card row ${st.done?'done':''}"><input type="checkbox" data-a="toggle" data-k="task" data-id="${t.id}" ${st.done?'checked':''}>
    <div class="grow"><div class="t">${esc(t.title)}</div>${t.d?`<div class="d">${esc(t.d)}</div>`:''}
-   ${t.v?'<span class="chip w">à vérifier</span>':''}${late?'<span class="chip e">en retard</span>':''}
-   <input type="date" class="dd" data-c="taskdue" data-id="${t.id}" value="${due}"></div></div>`})});
+   ${t.v?'<span class="chip w">à vérifier</span>':''}${late?'<span class="chip e">en retard</span>':''}</div>
+   <button class="x" data-a="deltask" data-id="${t.id}" aria-label="Supprimer">${ic('x-mark',18)}</button></div>`})});
+ const hid=TPL.filter(t=>(S.tasks[t.id]||{}).hidden);
+ if(hid.length){
+  h+=`<button class="btn s" data-a="showhid" style="margin-top:14px">Démarches masquées (${hid.length}) ${SHOWHID?'▲':'▼'}</button>`;
+  if(SHOWHID)hid.forEach(t=>{h+=`<div class="card row"><div class="grow"><div class="t">${esc(t.title)}</div><div class="d">${esc(PH[t.phase])}</div></div><button class="btn s" data-a="restoretask" data-id="${t.id}" style="width:auto;margin:0;padding:8px 12px">Restaurer</button></div>`})}
  return h}
 function vDocsList(){
  let h='<p class="sub">Suivi des documents et de leurs expirations. Ne saisis pas de numéros complets : garde les fichiers dans l\'app Fichiers/iCloud et note seulement leur emplacement.</p>';
@@ -529,6 +534,9 @@ document.addEventListener('click',e=>{
  if(a==='toggle')return; // géré par change
  if(a==='addcustom'){const t=document.getElementById('ct').value.trim(),d=document.getElementById('cd').value;
   if(!t){alert('Titre requis.');return}S.custom.push({id:uid(),title:t,due:d,done:false});save();render();return}
+ if(a==='showhid'){SHOWHID=!SHOWHID;render();return}
+ if(a==='restoretask'){const o=Object.assign({},S.tasks[id]);delete o.hidden;S.tasks[id]=o;save();render();return}
+ if(a==='deltask'){if(confirm('Supprimer cette démarche ?')){S.tasks[id]=Object.assign({},S.tasks[id],{hidden:true});save();render()}return}
  if(a==='delcustom'){S.custom=S.custom.filter(c=>c.id!==id);save();render();return}
  if(a==='adddoc'){const l=document.getElementById('dl').value.trim();if(!l){alert('Nom requis.');return}
   S.docs.push({id:uid(),type:document.getElementById('dt').value,label:l,expiry:document.getElementById('de').value,loc:document.getElementById('dloc').value.trim()});save();render();return}
