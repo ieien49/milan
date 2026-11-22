@@ -59,12 +59,13 @@ a.chip{text-decoration:none}
 .ic{vertical-align:-.2em;flex:none}
 .chip .ic{vertical-align:-2px;margin-right:3px}
 .mk{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
-#app.m{padding-top:calc(env(safe-area-inset-top) + 18px);padding-bottom:calc(env(safe-area-inset-bottom) + 70px)}
+#app.m{padding-top:calc(env(safe-area-inset-top) + 34px);padding-bottom:calc(env(safe-area-inset-bottom) + 70px)}
 html.mapmode,html.mapmode body{overflow:hidden;height:100%;overscroll-behavior:none}
 #mapwrap{position:relative}
-#map{height:calc(100dvh - 134px - env(safe-area-inset-top) - env(safe-area-inset-bottom));min-height:300px;border-radius:14px;border:1px solid var(--bd);z-index:0}
+#map{height:calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom));min-height:300px;border-radius:14px;border:1px solid var(--bd);z-index:0}
 #mlines{position:absolute;top:8px;left:8px;z-index:900;display:flex;gap:4px}
 .lc{height:24px;padding:0 9px;font-size:11px;font-weight:700;border-radius:99px;border:1px solid var(--bd);background:var(--card);color:var(--mu);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.lc.sel{box-shadow:0 0 0 2px var(--tx)}
 #mtools{position:absolute;top:8px;right:8px;z-index:900;display:flex;flex-direction:column;gap:8px}
 .mb{width:42px;height:42px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .mb.on{color:#1a73e8}
@@ -312,7 +313,7 @@ function vBudget(){
  <input type="text" inputmode="decimal" data-c="bset" data-f="income" value="${esc(B.income)}"></div>`;
  return h}
 /* ===== Carte ===== */
-let MAP=null,MVIEW=null,NETL=null,PLACEL=null,ME=null,HID={};
+let MAP=null,MVIEW=null,NETL=null,PLACEL=null,ME=null,FOCUS=null;
 const NKEY='milano-net-v1';
 const LCOL={M1:'#e2001a',M2:'#00963f',M3:'#ffc800',M4:'#0057b8',M5:'#8a5fb8'};
 const PRESET=[['Politecnico – campus Leonardo (position approximative)',45.4781,9.2276],['Politecnico – campus Bovisa (position approximative)',45.5028,9.1577]];
@@ -376,12 +377,14 @@ function popupFor(title,sub,lat,lon,extraBtn){const d=document.createElement('di
  d.appendChild(routeLink(lat,lon));if(extraBtn){d.appendChild(document.createElement('br'));d.appendChild(extraBtn)}return d}
 function drawNet(){
  if(!MAP||!NETL)return;NETL.clearLayers();SM=[];const n=curNet();if(!n)return;
- n.lines.forEach(l=>{if(HID[l.ref])return;L.polyline(l.paths,{color:l.col,weight:4,opacity:.85,interactive:false}).addTo(NETL)});
- n.stations.forEach(s=>{
-  if(s.refs.length&&s.refs.every(r=>HID[r]))return;
-  const c=s.refs.length?(LCOL[s.refs.find(r=>!HID[r])]||'#555'):'#555';
-  const st=stStyle(MAP.getZoom());
-  const m=L.circleMarker([s.lat,s.lon],{radius:st.r,color:c,weight:st.w,fillColor:'#fff',fillOpacity:1}).addTo(NETL);
+ const f=FOCUS;
+ n.lines.slice().sort((a,b)=>(a.ref===f)-(b.ref===f)).forEach(l=>{const on=!f||l.ref===f;
+  L.polyline(l.paths,{color:l.col,weight:on?(f?7:4):3,opacity:on?.95:.22,interactive:false}).addTo(NETL)});
+ const isOn=s=>!f||s.refs.includes(f);
+ n.stations.slice().sort((a,b)=>isOn(a)-isOn(b)).forEach(s=>{
+  const on=isOn(s),st=stStyle(MAP.getZoom());
+  const c=!on?'#999':(f?LCOL[f]:(s.refs.length?(LCOL[s.refs[0]]||'#555'):'#555'));
+  const m=L.circleMarker([s.lat,s.lon],{radius:st.r,color:c,weight:st.w,opacity:on?1:.35,fillColor:'#fff',fillOpacity:on?1:.35}).addTo(NETL);
   m.bindPopup(popupFor(s.name,s.refs.join(' · '),s.lat,s.lon));SM.push(m)})}
 let SM=[];
 function stStyle(z){return z<=11?{r:2,w:1.5}:z===12?{r:3,w:2}:z===13?{r:4,w:2.5}:z===14?{r:5,w:3}:{r:6,w:3}}
@@ -393,7 +396,8 @@ function drawPlaces(){
  S.places.forEach(p=>{const del=mkBtn('Supprimer ce lieu','btn r',()=>{if(confirm('Supprimer « '+p.name+' » ?')){S.places=S.places.filter(x=>x.id!==p.id);save();MAP.closePopup();drawPlaces()}});
   L.marker([p.lat,p.lon],{icon:pin('map-pin','#c0392b')}).addTo(PLACEL).bindPopup(popupFor(p.name,'',p.lat,p.lon,del))})}
 function updateLines(){const el=document.getElementById('mlines');if(!el)return;const n=curNet();
- el.innerHTML=n?n.lines.map(l=>`<button data-a="mline" data-v="${l.ref}" class="lc" style="${HID[l.ref]?'':'background:'+l.col+';border-color:'+l.col+';color:'+(l.ref==='M3'?'#000':'#fff')}">${l.ref}</button>`).join(''):''}
+ el.innerHTML=n?n.lines.map(l=>{const act=!FOCUS||FOCUS===l.ref;
+  return `<button data-a="mline" data-v="${l.ref}" class="lc${FOCUS===l.ref?' sel':''}" style="${act?'background:'+l.col+';border-color:'+l.col+';color:'+(l.ref==='M3'?'#000':'#fff'):''}">${l.ref}</button>`}).join(''):''}
 let ADD=false;
 function endAdd(){ADD=false;['mcross','mbar'].forEach(i=>{const e=document.getElementById(i);if(e)e.hidden=true})}
 const IC={
@@ -481,7 +485,7 @@ document.addEventListener('click',e=>{
  if(a==='mcancel'){endAdd();return}
  if(a==='mok'){if(!MAP)return;const c=MAP.getCenter(),nm=(prompt('Nom du lieu ?')||'').trim();if(!nm)return;
   S.places.push({id:uid(),name:nm,lat:Math.round(c.lat*1e5)/1e5,lon:Math.round(c.lng*1e5)/1e5});save();endAdd();drawPlaces();return}
- if(a==='mline'){const r=b.dataset.v;HID[r]=!HID[r];updateLines();drawNet();return}
+ if(a==='mline'){const r=b.dataset.v;FOCUS=FOCUS===r?null:r;updateLines();drawNet();return}
  if(a==='mlocate'){if(MAP)MAP.locate({setView:true,maxZoom:16});return}
  if(a==='mrefresh'){if(confirm('Recharger le réseau depuis OpenStreetMap ?'))fetchNet();return}
  if(a==='dsub'){dsub=b.dataset.v;render();return}
