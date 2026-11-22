@@ -11,6 +11,7 @@
 <meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="leaflet.css">
 <title>Milano</title>
 <style>
 :root{--bg:#f6f6f3;--card:#fff;--tx:#1b1c1e;--mu:#6b6e73;--bd:#e4e4df;--ac:#1f7a4d;--ac2:#e8f3ec;--wa:#b26a00;--wa2:#fff3df;--er:#c0392b;--er2:#fdeceb}
@@ -39,7 +40,7 @@ input[type=date]{min-height:42px}
 .hero{background:var(--ac);color:#fff;border-radius:16px;padding:16px;margin:0 0 6px}
 .hero b{font-size:28px;display:block}
 nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding:6px 6px calc(env(safe-area-inset-bottom) + 6px)}
-nav button{flex:1;background:none;border:0;padding:8px 0;font-size:10px;color:var(--mu)}
+nav button{flex:1;background:none;border:0;padding:8px 0;font-size:9.5px;color:var(--mu)}
 nav button span{display:block;font-size:19px}
 #big{position:fixed;inset:0;background:var(--bg);z-index:9;display:flex;flex-direction:column;justify-content:center;padding:24px;text-align:center}
 #big[hidden]{display:none}
@@ -55,6 +56,9 @@ label.l{display:block;font-size:13px;color:var(--mu);margin:0 0 3px}
 .mn{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
 .mn b{text-transform:capitalize}.mn .x{font-size:28px;padding:0 14px}
 a.chip{text-decoration:none}
+#map{height:calc(100dvh - 330px);min-height:300px;border-radius:14px;border:1px solid var(--bd);margin:0 0 8px;z-index:0}
+.pin{font-size:22px;line-height:26px;text-align:center;background:none;border:0}
+.leaflet-popup-content{color:#222}.leaflet-popup-content a{color:#1f7a4d}
 .seg{display:flex;gap:6px;margin:0 0 12px}
 .seg button{flex:1;padding:8px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx)}
 .seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
@@ -65,6 +69,7 @@ a.chip{text-decoration:none}
 <div id="big" data-a="bigclose" hidden></div>
 <nav id="nav"></nav>
 <input type="file" id="imp" accept="application/json,.json" hidden>
+<script src="leaflet.js"></script>
 <script>
 const KEY='milano-app-v1';
 const PH={avant:'Avant le départ',arrivee:'Arrivée (premières semaines)',pendant:'Pendant le semestre',depart:'Fin de semestre'};
@@ -101,7 +106,7 @@ const TPL=[
 ];
 const DOCT=['Pièce d\'identité','Passeport','CEAM','Assurance','Learning Agreement','Contrat de location','Abonnement ATM','Carte étudiante','Autre'];
 const EMERG=[['112','Numéro d\'urgence unique'],['118','Urgences médicales'],['113','Police'],['115','Pompiers']];
-const blank=()=>({settings:{arrival:'',departure:''},tasks:{},custom:[],docs:[],fav:[],contacts:[],budget:{limit:'',income:'',exp:[]}});
+const blank=()=>({settings:{arrival:'',departure:''},tasks:{},custom:[],docs:[],fav:[],contacts:[],places:[],budget:{limit:'',income:'',exp:[]}});
 let S=load(),tab='today';
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r)return Object.assign(blank(),r)}catch(e){}return blank()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Sauvegarde impossible. Exporte tes données.')}}
@@ -285,6 +290,105 @@ function vBudget(){
  <label class="l">Revenus mensuels (€) : bourse + aides + autres (optionnel)</label>
  <input type="text" inputmode="decimal" data-c="bset" data-f="income" value="${esc(B.income)}"></div>`;
  return h}
+/* ===== Carte ===== */
+let MAP=null,MVIEW=null,NETL=null,PLACEL=null,ME=null,HID={};
+const NKEY='milano-net-v1';
+const LCOL={M1:'#e2001a',M2:'#00963f',M3:'#ffc800',M4:'#0057b8',M5:'#8a5fb8'};
+const PRESET=[['Politecnico – campus Leonardo (position approximative)',45.4781,9.2276],['Politecnico – campus Bovisa (position approximative)',45.5028,9.1577]];
+const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+const BBOX='45.30,8.95,45.65,9.40';
+function loadNet(){try{return JSON.parse(localStorage.getItem(NKEY))}catch(e){return null}}
+/*PN*/
+function parseNet(json){
+ const nodes={},lines={},stn={},extra=[];let skipped=0;
+ (json.elements||[]).forEach(e=>{if(e.type==='node')nodes[e.id]=e});
+ (json.elements||[]).forEach(e=>{
+  if(e.type==='node'&&e.tags&&e.tags.station==='subway'&&e.tags.name&&e.lat!=null)extra.push({name:e.tags.name,lat:e.lat,lon:e.lon,refs:[]});
+  if(e.type!=='relation')return;
+  const t=e.tags||{};let ref=String(t.ref||'').trim().toUpperCase();
+  if(/^\d$/.test(ref))ref='M'+ref;
+  if(!/^M\d$/.test(ref)){skipped++;return}
+  const L=lines[ref]||(lines[ref]={ref:ref,col:LCOL[ref]||'#555555',paths:[],seen:{}});
+  (e.members||[]).forEach(m=>{
+   const role=m.role||'';
+   if(m.type==='way'&&m.geometry&&!/^(platform|stop)/.test(role)){
+    if(!L.seen[m.ref]){L.seen[m.ref]=1;L.paths.push(m.geometry.map(p=>[Math.round(p.lat*1e5)/1e5,Math.round(p.lon*1e5)/1e5]))}
+   }else if(m.type==='node'&&/^stop/.test(role)&&m.lat!=null){
+    const nd=nodes[m.ref],nm=nd&&nd.tags&&nd.tags.name;if(!nm)return;
+    const k=nm.toLowerCase(),s=stn[k]||(stn[k]={name:nm,la:0,lo:0,n:0,refs:[]});
+    s.la+=m.lat;s.lo+=m.lon;s.n++;if(s.refs.indexOf(ref)<0)s.refs.push(ref)}
+  })});
+ let stations=Object.keys(stn).map(k=>{const s=stn[k];return{name:s.name,lat:Math.round(s.la/s.n*1e5)/1e5,lon:Math.round(s.lo/s.n*1e5)/1e5,refs:s.refs.sort()}});
+ if(stations.length<20&&extra.length)stations=extra.map(s=>({name:s.name,lat:Math.round(s.lat*1e5)/1e5,lon:Math.round(s.lon*1e5)/1e5,refs:[]}));
+ const L=Object.keys(lines).sort().map(k=>({ref:k,col:lines[k].col,paths:lines[k].paths}));
+ return{ts:Date.now(),lines:L,stations:stations,skipped:skipped}}
+/*PN-end*/
+function setStatus(m){const e=document.getElementById('mst');if(e)e.textContent=m}
+function statusText(){const n=loadNet();if(!n)return'Réseau de transport non chargé.';
+ return n.lines.length+' ligne(s), '+n.stations.length+' stations · données OpenStreetMap du '+new Date(n.ts).toLocaleDateString('fr-FR')+(n.skipped?' · '+n.skipped+' relation(s) ignorée(s)':'')}
+async function fetchNet(){
+ setStatus('Chargement du réseau (OpenStreetMap)… peut prendre 10 à 60 s.');
+ const q='[out:json][timeout:90];rel["route"="subway"]('+BBOX+')->.r;.r out geom;node(r.r);out;node["station"="subway"]('+BBOX+');out;';
+ let err='';
+ for(const url of OVERPASS){
+  try{
+   const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),80000);
+   const r=await fetch(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctl.signal});
+   clearTimeout(to);
+   if(!r.ok){err=url.split('/')[2]+' : HTTP '+r.status;continue}
+   const j=await r.json(),net=parseNet(j);
+   if(!net.lines.length){err='Aucune ligne M1–M5 trouvée dans la réponse (tags OSM inattendus). Remarque serveur : '+(j.remark||'aucune');continue}
+   try{localStorage.setItem(NKEY,JSON.stringify(net))}catch(e){err='Réseau chargé mais impossible à mettre en cache (stockage plein).'}
+   NETMEM=net;
+   if(MAP){updateLines();drawNet()}
+   setStatus(statusText()+(err?' · '+err:''));return
+  }catch(e){err=url.split('/')[2]+' : '+(e.name==='AbortError'?'délai dépassé':e.message)}
+ }
+ setStatus('Échec du chargement. '+err+' Réessaie avec le bouton Réseau.');
+}
+let NETMEM=null;
+function curNet(){return NETMEM||(NETMEM=loadNet())}
+function mkBtn(txt,cls,fn){const b=document.createElement('button');b.className=cls||'btn';b.textContent=txt;b.addEventListener('click',fn);return b}
+function routeLink(lat,lon){const a=document.createElement('a');a.href='https://maps.apple.com/?daddr='+lat+','+lon+'&dirflg=r';a.textContent='Itinéraire (transports) →';return a}
+function popupFor(title,sub,lat,lon,extraBtn){const d=document.createElement('div');const b=document.createElement('b');b.textContent=title;d.appendChild(b);
+ if(sub){const s=document.createElement('div');s.textContent=sub;s.style.margin='2px 0';d.appendChild(s)}
+ d.appendChild(routeLink(lat,lon));if(extraBtn){d.appendChild(document.createElement('br'));d.appendChild(extraBtn)}return d}
+function drawNet(){
+ if(!MAP||!NETL)return;NETL.clearLayers();const n=curNet();if(!n)return;
+ n.lines.forEach(l=>{if(HID[l.ref])return;L.polyline(l.paths,{color:l.col,weight:5,opacity:.85}).addTo(NETL)});
+ n.stations.forEach(s=>{
+  if(s.refs.length&&s.refs.every(r=>HID[r]))return;
+  const c=s.refs.length?(LCOL[s.refs.find(r=>!HID[r])]||'#555'):'#555';
+  const m=L.circleMarker([s.lat,s.lon],{radius:6,color:c,weight:3,fillColor:'#fff',fillOpacity:1}).addTo(NETL);
+  m.bindPopup(popupFor(s.name,s.refs.join(' · '),s.lat,s.lon))})}
+function drawPlaces(){
+ if(!MAP||!PLACEL)return;PLACEL.clearLayers();
+ const pin=e=>L.divIcon({html:e,className:'pin',iconSize:[26,26],iconAnchor:[13,22],popupAnchor:[0,-18]});
+ PRESET.forEach(([n,la,lo])=>L.marker([la,lo],{icon:pin('🎓')}).addTo(PLACEL).bindPopup(popupFor(n,'',la,lo)));
+ S.places.forEach(p=>{const del=mkBtn('Supprimer ce lieu','btn r',()=>{if(confirm('Supprimer « '+p.name+' » ?')){S.places=S.places.filter(x=>x.id!==p.id);save();MAP.closePopup();drawPlaces()}});
+  L.marker([p.lat,p.lon],{icon:pin('📍')}).addTo(PLACEL).bindPopup(popupFor(p.name,'',p.lat,p.lon,del))})}
+function updateLines(){const el=document.getElementById('mlines');if(!el)return;const n=curNet();
+ el.innerHTML=n?n.lines.map(l=>`<button data-a="mline" data-v="${l.ref}" class="${HID[l.ref]?'':'on'}" style="${HID[l.ref]?'':'background:'+l.col+';border-color:'+l.col+';color:'+(l.ref==='M3'?'#000':'#fff')}">${l.ref}</button>`).join(''):''}
+function vMap(){
+ return `<h1>Carte</h1><p class="sub" id="mst">${esc(statusText())}</p><div class="seg" id="mlines"></div>
+ <div class="seg"><button data-a="mlocate">📍 Me localiser</button><button data-a="mrefresh">↻ Réseau</button></div>
+ <div id="map"></div><p class="sub">Touche la carte pour ajouter un lieu. Les tuiles de carte viennent d'OpenStreetMap (réseau requis, seules les zones déjà vues sont mises en cache). Le tracé du réseau est gardé hors ligne une fois chargé.</p>`}
+function saveView(){if(MAP){const c=MAP.getCenter();MVIEW={c:[c.lat,c.lng],z:MAP.getZoom()}}}
+function initMap(){
+ const el=document.getElementById('map');if(!el)return;
+ if(!window.L){el.innerHTML='<p class="sub" style="padding:12px">Leaflet non chargé (fichier leaflet.js manquant ?).</p>';return}
+ MAP=L.map(el).setView(MVIEW?MVIEW.c:[45.4642,9.19],MVIEW?MVIEW.z:12);
+ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true,attribution:'© OpenStreetMap'}).addTo(MAP);
+ NETL=L.layerGroup().addTo(MAP);PLACEL=L.layerGroup().addTo(MAP);
+ updateLines();drawNet();drawPlaces();
+ MAP.on('click',ev=>{const d=document.createElement('div');
+  d.appendChild(mkBtn('➕ Ajouter un lieu ici','btn',()=>{const nm=(prompt('Nom du lieu ?')||'').trim();if(!nm)return;
+   S.places.push({id:uid(),name:nm,lat:Math.round(ev.latlng.lat*1e5)/1e5,lon:Math.round(ev.latlng.lng*1e5)/1e5});save();MAP.closePopup();drawPlaces()}));
+  L.popup().setLatLng(ev.latlng).setContent(d).openOn(MAP)});
+ MAP.on('locationfound',ev=>{if(ME)ME.remove();ME=L.circleMarker(ev.latlng,{radius:8,color:'#fff',weight:3,fillColor:'#1a73e8',fillOpacity:1}).addTo(MAP)});
+ MAP.on('locationerror',()=>alert('Position indisponible. Vérifie l\'autorisation de localisation pour Safari / l\'app dans Réglages iOS.'));
+ if(!curNet())fetchNet();
+ setTimeout(()=>{if(MAP)MAP.invalidateSize()},250)}
 let dsub='docs';
 const CC=['Polimi','Santé','Logement','Administration','Banque','Famille / proches','Autre'];
 const LINKS=[['Polimi','https://www.polimi.it'],['ATM Milano (transports)','https://www.atm.it'],['Trenitalia','https://www.trenitalia.com'],['Italo','https://www.italotreno.it'],['Agenzia delle Entrate','https://www.agenziaentrate.gov.it'],['ameli (CEAM)','https://www.ameli.fr'],['Erasmus Student Network','https://esn.org']];
@@ -309,11 +413,11 @@ function backupBanner(){
  if(n!==null&&n<=14)return'';
  return `<div class="card" style="border-color:var(--wa)"><div class="t">⚠️ Sauvegarde</div><div class="d">${n===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+n+' jours.'} iOS peut effacer les données locales.</div><button class="btn s" style="margin-top:8px" data-a="json">Exporter maintenant</button></div>`}
 function render(){
- const y=window.scrollY;
- document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet}[tab]();
- document.getElementById('nav').innerHTML=[['today','🗓','Accueil'],['check','✅','Démarches'],['budget','💶','Budget'],['ital','🇮🇹','Italien'],['docs','🗂','Dossier'],['set','⚙️','Réglages']]
+ const y=window.scrollY;if(MAP){saveView();MAP.remove();MAP=null;ME=null}
+ document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet,map:vMap}[tab]();
+ document.getElementById('nav').innerHTML=[['today','🗓','Accueil'],['check','✅','Démarches'],['budget','💶','Budget'],['ital','🇮🇹','Italien'],['map','🗺','Carte'],['docs','🗂','Dossier'],['set','⚙️','Réglages']]
   .map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><span>${i}</span>${l}</button>`).join('');
- window.scrollTo(0,y)}
+ window.scrollTo(0,y);if(tab==='map')initMap()}
 async function outFile(name,text,mime){
  const f=new File([text],name,{type:mime});
  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return true}catch(e){if(e.name==='AbortError')return false}}
@@ -342,6 +446,9 @@ document.addEventListener('click',e=>{
   if(!(am>0)||!d){alert('Montant et date requis.');return}
   S.budget.exp.push({id:uid(),date:d,amount:Math.round(am*100)/100,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),n,reimb:false});save();bm=d.slice(0,7);render();return}
  if(a==='delexp'){if(confirm('Supprimer cette dépense ?')){S.budget.exp=S.budget.exp.filter(x=>x.id!==id);save();render()}return}
+ if(a==='mline'){const r=b.dataset.v;HID[r]=!HID[r];updateLines();drawNet();return}
+ if(a==='mlocate'){if(MAP)MAP.locate({setView:true,maxZoom:16});return}
+ if(a==='mrefresh'){if(confirm('Recharger le réseau depuis OpenStreetMap ?'))fetchNet();return}
  if(a==='dsub'){dsub=b.dataset.v;render();return}
  if(a==='addct'){const nm=document.getElementById('kn').value.trim();if(!nm){alert('Nom requis.');return}
   S.contacts.push({id:uid(),name:nm,cat:document.getElementById('kc').value,tel:document.getElementById('kt').value.trim(),mail:document.getElementById('km').value.trim(),addr:document.getElementById('ka').value.trim(),note:document.getElementById('ko').value.trim()});save();render();return}
