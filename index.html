@@ -56,9 +56,10 @@ label.l{display:block;font-size:13px;color:var(--mu);margin:0 0 3px}
 .mn{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
 .mn b{text-transform:capitalize}.mn .x{font-size:28px;padding:0 14px}
 a.chip{text-decoration:none}
-#app.m{padding-top:calc(env(safe-area-inset-top) + 6px);padding-bottom:calc(env(safe-area-inset-bottom) + 70px)}
+#app.m{padding-top:calc(env(safe-area-inset-top) + 18px);padding-bottom:calc(env(safe-area-inset-bottom) + 70px)}
+html.mapmode,html.mapmode body{overflow:hidden;height:100%;overscroll-behavior:none}
 #mapwrap{position:relative}
-#map{height:calc(100dvh - 118px - env(safe-area-inset-top) - env(safe-area-inset-bottom));min-height:300px;border-radius:14px;border:1px solid var(--bd);z-index:0}
+#map{height:calc(100dvh - 134px - env(safe-area-inset-top) - env(safe-area-inset-bottom));min-height:300px;border-radius:14px;border:1px solid var(--bd);z-index:0}
 #mlines{position:absolute;top:8px;left:8px;z-index:900;display:flex;gap:4px}
 .lc{height:24px;padding:0 9px;font-size:11px;font-weight:700;border-radius:99px;border:1px solid var(--bd);background:var(--card);color:var(--mu);box-shadow:0 1px 3px rgba(0,0,0,.25)}
 #mtools{position:absolute;top:8px;right:8px;z-index:900;display:flex;flex-direction:column;gap:8px}
@@ -436,7 +437,7 @@ function backupBanner(){
  return `<div class="card" style="border-color:var(--wa)"><div class="t">⚠️ Sauvegarde</div><div class="d">${n===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+n+' jours.'} iOS peut effacer les données locales.</div><button class="btn s" style="margin-top:8px" data-a="json">Exporter maintenant</button></div>`}
 function render(){
  const y=window.scrollY;if(MAP){saveView();MAP.remove();MAP=null;ME=null;ADD=false}
- document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet,map:vMap}[tab]();document.getElementById('app').className=tab==='map'?'m':'';
+ document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet,map:vMap}[tab]();document.getElementById('app').className=tab==='map'?'m':'';document.documentElement.classList.toggle('mapmode',tab==='map');
  document.getElementById('nav').innerHTML=[['today','🗓','Accueil'],['check','✅','Démarches'],['budget','💶','Budget'],['ital','🇮🇹','Italien'],['map','🗺','Carte'],['docs','🗂','Dossier'],['set','⚙️','Réglages']]
   .map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><span>${i}</span>${l}</button>`).join('');
  window.scrollTo(0,y);if(tab==='map')initMap()}
