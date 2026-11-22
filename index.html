@@ -78,6 +78,12 @@ html.mapmode,html.mapmode body{overflow:hidden;height:100%;overscroll-behavior:n
 #mfilt{position:absolute;top:42px;left:8px;right:60px;z-index:900;display:flex;flex-wrap:wrap;gap:6px;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:8px;box-shadow:0 1px 6px rgba(0,0,0,.3)}
 #mfilt[hidden]{display:none}
 #mcross[hidden],#mbar[hidden]{display:none}
+#msearch{position:absolute;top:42px;left:8px;right:60px;z-index:900;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:8px;box-shadow:0 1px 6px rgba(0,0,0,.3)}
+#msearch[hidden]{display:none}
+#sres{max-height:40dvh;overflow:auto;margin-top:6px}
+.sr{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--bd);padding:8px 2px}
+.sr b{display:block;font-size:14px}
+.sr .d{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pin{font-size:22px;line-height:26px;text-align:center;background:none;border:0}
 .leaflet-popup-content{color:#222}.leaflet-popup-content a{color:#1f7a4d}
 .seg{display:flex;gap:6px;margin:0 0 12px}
@@ -421,16 +427,44 @@ function updateFilter(){const el=document.getElementById('mfilt');if(!el)return;
  const used=PC.filter(c=>catCount(c.k)>0);
  el.innerHTML=used.map(c=>{const vis=!PFOCUS||PFOCUS===c.k;return `<button class="cc${PFOCUS===c.k?' sel':''}" data-a="mcat" data-v="${c.k}" style="${vis?'background:'+c.c+';border-color:'+c.c+';color:#fff':''}">${ic(c.i,16)}${c.s} ${catCount(c.k)}</button>`}).join('')||'<span class="d">Aucun lieu</span>';
  const f=document.querySelector('[data-a=mfilter]');if(f)f.classList.toggle('on',!!PFOCUS)}
+let SQ='',SRES=[],SMK=null;
+function localHits(q){
+ q=q.trim().toLowerCase();if(q.length<2)return[];
+ const out=[];
+ S.places.forEach(p=>{if(p.name.toLowerCase().includes(q))out.push({n:p.name,s:catOf(p).l,la:p.lat,lo:p.lon})});
+ PRESET.forEach(([n,la,lo])=>{if(n.toLowerCase().includes(q))out.push({n,s:'Études',la,lo})});
+ const net=curNet();if(net)net.stations.forEach(s=>{if(s.name.toLowerCase().includes(q))out.push({n:s.name,s:'Station '+s.refs.join(' · '),la:s.lat,lo:s.lon})});
+ return out.slice(0,8)}
+function drawSearch(extra,msg){
+ const el=document.getElementById('sres');if(!el)return;
+ SRES=localHits(SQ).concat(extra||[]);
+ el.innerHTML=SRES.map((r,i)=>`<button class="sr" data-a="sgo" data-id="${i}"><b>${esc(r.n)}</b><span class="d">${esc(r.s)}</span></button>`).join('')+(msg?`<div class="d" style="padding:6px 2px">${esc(msg)}</div>`:'')}
+async function geoSearch(){
+ const q=SQ.trim();if(q.length<3)return;
+ drawSearch([],'Recherche…');
+ try{
+  const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=fr&countrycodes=it&viewbox=8.9,45.6,9.45,45.3&q='+encodeURIComponent(q));
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  drawSearch(j.map(x=>({n:x.name||x.display_name.split(',')[0],s:x.display_name,la:+x.lat,lo:+x.lon})),j.length?'':'Aucun résultat.');
+ }catch(e){drawSearch([],'Recherche impossible : '+e.message)}}
+function goTo(r){
+ if(!MAP||!r)return;if(SMK){SMK.remove();SMK=null}
+ MAP.setView([r.la,r.lo],Math.max(MAP.getZoom(),16));
+ SMK=L.marker([r.la,r.lo],{icon:L.divIcon({html:'<div style="color:#c0392b">'+IC.pin+'</div>',className:'pin',iconSize:[36,36],iconAnchor:[18,34],popupAnchor:[0,-30]})}).addTo(MAP).bindPopup(popupFor(r.n,r.s,r.la,r.lo)).openPopup();
+ document.getElementById('msearch').hidden=true}
 function endAdd(){ADD=false;['mcross','mbar'].forEach(i=>{const e=document.getElementById(i);if(e)e.hidden=true})}
 const IC={
+ srch:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg>',
  loc:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
  add:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.6-6-10a6 6 0 1 1 12 0c0 4.4-6 10-6 10z"/><path d="M12 8.5v5M9.5 11h5"/></svg>',
  ref:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>',
  pin:'<svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" stroke="#fff" stroke-width="1"><path d="M12 22s-7-6.2-7-12a7 7 0 1 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="10" r="2.5" fill="#fff" stroke="none"/></svg>'};
 function vMap(){
  return `<div id="mapwrap"><div id="map"></div><div id="mlines"></div>
- <div id="mtools"><button class="mb" data-a="mlocate" aria-label="Me localiser">${IC.loc}</button><button class="mb" data-a="madd" aria-label="Ajouter un lieu">${IC.add}</button><button class="mb" data-a="mfilter" aria-label="Filtrer les lieux">${ic('funnel',22)}</button><button class="mb" data-a="mrefresh" aria-label="Recharger le réseau">${ic('arrow-path',22)}</button></div>
+ <div id="mtools"><button class="mb" data-a="mlocate" aria-label="Me localiser">${IC.loc}</button><button class="mb" data-a="madd" aria-label="Ajouter un lieu">${IC.add}</button><button class="mb" data-a="mfilter" aria-label="Filtrer les lieux">${ic('funnel',22)}</button><button class="mb" data-a="msearch" aria-label="Rechercher">${IC.srch}</button><button class="mb" data-a="mrefresh" aria-label="Recharger le réseau">${ic('arrow-path',22)}</button></div>
  <div id="mfilt" hidden></div>
+ <div id="msearch" hidden><div class="mrow"><input type="text" id="sq" placeholder="Lieu, station, adresse…" autocomplete="off" enterkeyhint="search" style="flex:1;margin:0"><button class="btn" data-a="sgeo" style="width:auto;margin:0;padding:10px 14px">OK</button></div><div id="sres"></div></div>
  <div id="mcross" hidden>${IC.pin}</div>
  <div id="mbar" hidden><div class="mrow"><span>Place le repère, choisis le type :</span></div><div class="mrow" id="mcats"></div><div class="mrow"><button class="btn s" data-a="mcancel">Annuler</button><button class="btn" data-a="mok">Valider</button></div></div></div>
  <p class="sub" id="mst" style="margin:6px 2px 0;font-size:12px">${esc(statusText())}</p>`}
@@ -440,7 +474,7 @@ function initMap(){
  if(!window.L){el.innerHTML='<p class="sub" style="padding:12px">Leaflet non chargé (fichier leaflet.js manquant ?).</p>';return}
  MAP=L.map(el,{zoomControl:false,renderer:L.canvas({tolerance:10})}).setView(MVIEW?MVIEW.c:[45.4642,9.19],MVIEW?MVIEW.z:12);
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true,attribution:'© OpenStreetMap'}).addTo(MAP);
- NETL=L.layerGroup().addTo(MAP);PLACEL=L.layerGroup().addTo(MAP);
+ SMK=null;NETL=L.layerGroup().addTo(MAP);PLACEL=L.layerGroup().addTo(MAP);
  updateLines();drawNet();drawPlaces();updateFilter();
  MAP.on('zoomend',restyleStations);
  MAP.on('locationfound',ev=>{if(ME)ME.remove();ME=L.circleMarker(ev.latlng,{radius:8,color:'#fff',weight:3,fillColor:'#1a73e8',fillOpacity:1}).addTo(MAP)});
@@ -504,16 +538,19 @@ document.addEventListener('click',e=>{
   if(!(am>0)||!d){alert('Montant et date requis.');return}
   S.budget.exp.push({id:uid(),date:d,amount:Math.round(am*100)/100,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),n,reimb:false});save();bm=d.slice(0,7);render();return}
  if(a==='delexp'){if(confirm('Supprimer cette dépense ?')){S.budget.exp=S.budget.exp.filter(x=>x.id!==id);save();render()}return}
- if(a==='madd'){if(!MAP)return;ADD=true;MAP.closePopup();document.getElementById('mfilt').hidden=true;document.getElementById('mcross').hidden=false;document.getElementById('mbar').hidden=false;updateCats();return}
+ if(a==='madd'){if(!MAP)return;ADD=true;MAP.closePopup();document.getElementById('msearch').hidden=true;document.getElementById('mfilt').hidden=true;document.getElementById('mcross').hidden=false;document.getElementById('mbar').hidden=false;updateCats();return}
  if(a==='mcancel'){endAdd();return}
  if(a==='mpick'){ADDCAT=b.dataset.v;updateCats();return}
- if(a==='mfilter'){const e=document.getElementById('mfilt');e.hidden=!e.hidden;if(!e.hidden)updateFilter();return}
+ if(a==='mfilter'){document.getElementById('msearch').hidden=true;const e=document.getElementById('mfilt');e.hidden=!e.hidden;if(!e.hidden)updateFilter();return}
  if(a==='mcat'){const k=b.dataset.v;PFOCUS=PFOCUS===k?null:k;updateFilter();drawPlaces();return}
  if(a==='mok'){if(!MAP)return;const c=MAP.getCenter(),nm=(prompt('Nom du lieu ?')||'').trim();if(!nm)return;
   S.places.push({id:uid(),name:nm,cat:ADDCAT,lat:Math.round(c.lat*1e5)/1e5,lon:Math.round(c.lng*1e5)/1e5});PFOCUS=null;save();endAdd();drawPlaces();updateFilter();return}
  if(a==='mline'){const r=b.dataset.v;FOCUS=FOCUS===r?null:r;updateLines();drawNet();return}
  if(a==='mlocate'){if(MAP)MAP.locate({setView:true,maxZoom:16});return}
  if(a==='mrefresh'){if(confirm('Recharger le réseau depuis OpenStreetMap ?'))fetchNet();return}
+ if(a==='msearch'){const e=document.getElementById('msearch');e.hidden=!e.hidden;document.getElementById('mfilt').hidden=true;if(!e.hidden)document.getElementById('sq').focus();return}
+ if(a==='sgeo'){geoSearch();return}
+ if(a==='sgo'){goTo(SRES[Number(id)]);return}
  if(a==='dsub'){dsub=b.dataset.v;render();return}
  if(a==='addct'){const nm=document.getElementById('kn').value.trim();if(!nm){alert('Nom requis.');return}
   S.contacts.push({id:uid(),name:nm,cat:document.getElementById('kc').value,tel:document.getElementById('kt').value.trim(),mail:document.getElementById('km').value.trim(),addr:document.getElementById('ka').value.trim(),note:document.getElementById('ko').value.trim()});save();render();return}
@@ -540,6 +577,8 @@ document.addEventListener('change',e=>{
  if(t.dataset.c==='set'){S.settings[t.dataset.f]=t.value;save();render()}
 });
 document.addEventListener('input',e=>{if(e.target.id==='pq'){q=e.target.value;document.getElementById('plist').innerHTML=plist()}});
+document.addEventListener('input',e=>{if(e.target.id==='sq'){SQ=e.target.value;drawSearch()}});
+document.addEventListener('keydown',e=>{if(e.target.id==='sq'&&e.key==='Enter'){e.preventDefault();geoSearch()}});
 document.getElementById('imp').addEventListener('change',e=>{
  const f=e.target.files[0];if(!f)return;const r=new FileReader();
  r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.settings||!Array.isArray(o.docs))throw 0;S=Object.assign(blank(),o);save();render();alert('Import réussi.')}catch(x){alert('Fichier invalide.')}};
