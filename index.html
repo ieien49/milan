@@ -111,11 +111,11 @@ const TPL=[
 {id:'a2',phase:'avant',rel:'arrival',off:-30,title:'Convention de subvention Erasmus signée',d:"Grant agreement : conditions et calendrier des versements."},
 {id:'a3',phase:'avant',rel:'arrival',off:-30,v:1,title:'Demander la CEAM (carte européenne d\'assurance maladie)',d:"Demande sur ameli.fr. Prévoir ~2 semaines de délai. Vérifie sa couverture dans ton cas d'étudiant."},
 {id:'a4',phase:'avant',rel:'arrival',off:-30,v:1,title:'Contacter le bureau international de Polimi',d:"Procédure d'accueil, date de rentrée, documents à fournir à l'arrivée."},
-{id:'a5',phase:'avant',rel:'arrival',off:-21,title:'Assurance responsabilité civile / rapatriement',d:"Complément à la CEAM. Garde l'attestation dans le coffre."},
-{id:'a6',phase:'avant',rel:'arrival',off:-21,title:'Logement réservé, contrat signé',d:"Garde le contrat et les justificatifs de paiement dans le coffre."},
+{id:'a5',phase:'avant',rel:'arrival',off:-21,title:'Assurance responsabilité civile / rapatriement',d:"Complément à la CEAM. Garde l'attestation dans l'app Fichiers."},
+{id:'a6',phase:'avant',rel:'arrival',off:-21,title:'Logement réservé, contrat signé',d:"Garde le contrat et les justificatifs de paiement dans l'app Fichiers."},
 {id:'a7',phase:'avant',rel:'arrival',off:-14,title:'Prévenir la banque / carte sans frais hors zone euro',d:"Plafonds de paiement et retrait pour 6 mois."},
 {id:'a8',phase:'avant',rel:'arrival',off:-14,title:'Billets d\'arrivée achetés',d:""},
-{id:'a9',phase:'avant',rel:'arrival',off:-7,title:'Scanner pièce d\'identité, CEAM, LA, assurance, contrat',d:"Enregistre-les dans l'app Fichiers (disponible hors ligne) et note l'emplacement dans le coffre."},
+{id:'a9',phase:'avant',rel:'arrival',off:-7,title:'Scanner pièce d\'identité, CEAM, LA, assurance, contrat',d:"Enregistre-les dans l'app Fichiers (disponible hors ligne)."},
 {id:'b1',phase:'arrivee',rel:'arrival',off:3,v:1,title:'Certificate of arrival signé par Polimi',d:"À renvoyer à ton établissement d'origine pour déclencher la bourse."},
 {id:'b2',phase:'arrivee',rel:'arrival',off:3,title:'SIM / forfait italien',d:"Pense à la vérification d'identité (pièce d'identité exigée)."},
 {id:'b3',phase:'arrivee',rel:'arrival',off:3,title:'Abonnement ATM (transports Milan)',d:"Vérifie les tarifs étudiants / moins de 27 ans."},
@@ -136,7 +136,6 @@ const TPL=[
 {id:'d7',phase:'depart',rel:'departure',off:-1,title:'Exporter une sauvegarde de l\'app',d:"Réglages → Exporter (JSON)."},
 {id:'d8',phase:'depart',rel:'departure',off:14,v:1,title:'Rapport / questionnaire final Erasmus',d:"Dans les semaines suivant le retour. Vérifie le délai."}
 ];
-const DOCT=['Pièce d\'identité','Passeport','CEAM','Assurance','Learning Agreement','Contrat de location','Abonnement ATM','Carte étudiante','Autre'];
 const EMERG=[['112','Numéro d\'urgence unique'],['118','Urgences médicales'],['113','Police'],['115','Pompiers']];
 const blank=()=>({settings:{arrival:'',departure:''},tasks:{},custom:[],docs:[],fav:[],contacts:[],places:[],budget:{limit:'',income:'',exp:[]}});
 let S=load(),tab='today';
@@ -156,11 +155,10 @@ function items(){
  const o=[];
  TPL.forEach(t=>{const st=S.tasks[t.id]||{};if(st.hidden)return;o.push({key:'task-'+t.id,kind:'task',id:t.id,title:t.title,due:dueOf(t),done:!!st.done,v:t.v})});
  S.custom.forEach(c=>o.push({key:'c-'+c.id,kind:'custom',id:c.id,title:c.title,due:c.due||'',done:!!c.done}));
- S.docs.forEach(d=>{if(d.expiry)o.push({key:'doc-'+d.id,kind:'doc',id:d.id,title:'Expiration : '+d.label,due:d.expiry,done:false})});
  return o}
 function itemRow(i){
  const late=i.due&&!i.done&&diff(i.due)<0;
- const box=i.kind==='doc'?`<span style="width:24px;flex:none;color:var(--mu)">${ic('document-text',22)}</span>`:`<input type="checkbox" data-a="toggle" data-k="${i.kind}" data-id="${i.id}" ${i.done?'checked':''}>`;
+ const box=`<input type="checkbox" data-a="toggle" data-k="${i.kind}" data-id="${i.id}" ${i.done?'checked':''}>`;
  return `<div class="card row ${i.done?'done':''}">${box}<div class="grow"><div class="t">${esc(i.title)}</div>
  ${i.due?`<span class="chip ${late?'e':''}">${fmt(i.due)} · ${rel(i.due)}</span>`:''}${i.v?'<span class="chip w">à vérifier</span>':''}</div>
  ${i.kind==='custom'?`<button class="x" data-a="delcustom" data-id="${i.id}">${ic('x-mark',18)}</button>`:''}</div>`}
@@ -176,7 +174,7 @@ function vToday(){
  let h=`<h1>Milano</h1><p class="sub">${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</p>${hero}${backupBanner()}`;
  g.forEach(([n,f])=>{const l=all.filter(f);if(l.length)h+=`<h2>${n} (${l.length})</h2>`+l.map(itemRow).join('')});
  if(!all.length)h+='<p class="sub">Aucune échéance datée. Définis tes dates dans Réglages.</p>';
- const sd=items().filter(i=>!i.due&&!i.done&&i.kind!=='doc').length;
+ const sd=items().filter(i=>!i.due&&!i.done).length;
  if(sd&&!a)h+=`<p class="sub">${sd} tâches sans date (dates d'arrivée/départ manquantes).</p>`;
  h+=`<h2>Ajouter une échéance</h2><div class="card"><input type="text" id="ct" placeholder="Ex : examen de Fisica"><input type="date" id="cd"><button class="btn" data-a="addcustom">Ajouter</button></div>`;
  return h}
@@ -197,16 +195,6 @@ function vCheck(){
  if(hid.length){
   h+=`<button class="btn s" data-a="showhid" style="margin-top:14px">Démarches masquées (${hid.length}) ${SHOWHID?'▲':'▼'}</button>`;
   if(SHOWHID)hid.forEach(t=>{h+=`<div class="card row"><div class="grow"><div class="t">${esc(t.title)}</div><div class="d">${esc(PH[t.phase])}</div></div><button class="btn s" data-a="restoretask" data-id="${t.id}" style="width:auto;margin:0;padding:8px 12px">Restaurer</button></div>`})}
- return h}
-function vDocsList(){
- let h='<p class="sub">Suivi des documents et de leurs expirations. Ne saisis pas de numéros complets : garde les fichiers dans l\'app Fichiers/iCloud et note seulement leur emplacement.</p>';
- const ds=[...S.docs].sort((a,b)=>(a.expiry||'9999')<(b.expiry||'9999')?-1:1);
- ds.forEach(d=>{let ch='';if(d.expiry){const n=diff(d.expiry);ch=n<0?'<span class="chip e">Expiré</span>':n<60?`<span class="chip w">Expire dans ${n} j</span>`:`<span class="chip">Expire le ${fmt(d.expiry)}</span>`}
-  h+=`<div class="card row"><div class="grow"><div class="t">${esc(d.label)}</div><div class="d">${esc(d.type)}${d.loc?' · '+esc(d.loc):''}</div>${ch}</div><button class="x" data-a="deldoc" data-id="${d.id}">${ic('x-mark',18)}</button></div>`});
- if(!ds.length)h+='<p class="sub">Aucun document.</p>';
- h+=`<h2>Ajouter</h2><div class="card"><select id="dt">${DOCT.map(t=>`<option>${esc(t)}</option>`).join('')}</select>
- <input type="text" id="dl" placeholder="Nom (ex : CNI)"><label class="l">Date d'expiration (optionnel)</label><input type="date" id="de">
- <input type="text" id="dloc" placeholder="Emplacement (ex : Fichiers > Italie > CNI.pdf)"><button class="btn" data-a="adddoc">Ajouter</button></div>`;
  return h}
 
 const VIE=[
@@ -242,11 +230,25 @@ const VIE=[
 {n:"Coop (Coop Lombardia)",a:"Horaires par magasin : site Coop Lombardia",h:"Dimanche : souvent 9h-20h30, ou matin seulement",v:1},
 {n:"MD, Eurospin, Aldi (discount)",a:"Horaires par magasin : sites des enseignes",h:"Chaque magasin fixe ses horaires",v:1}
 ],notes:["Les horaires ci-dessus sont des exemples relevés dans la presse locale (dimanches et jours fériés), pas les horaires officiels : vérifie sur le site de l'enseigne avant d'y aller. Je n'ai pas relevé les horaires de semaine.","À Pâques, à Noël (25 déc.), à Santo Stefano (26 déc.) et le 1er janvier, presque tout est fermé. Certains Conad ouvrent exceptionnellement, quelques heures."]},
+{id:"cul",i:"ticket",t:"Culture",l:[
+{n:"Musei del Castello Sforzesco",m:"Piazza Castello, Milano",a:"Piazza Castello (entrée Largo Cairoli 18)",t:"02 88463700",tel:"+390288463700",h:"Mar-dim, environ 9h-17h30, dernière entrée 17h ; fermé le lundi",note:"Pas de réservation possible les jours gratuits.",v:1},
+{n:"Pinacoteca di Brera",m:"Via Brera 28, Milano",a:"Via Brera 28",h:"Voir brera.beniculturali.it",note:"Gratuite le 1er dimanche du mois, mais réservation obligatoire (brerabooking.org).",v:1},
+{n:"Cenacolo Vinciano (La Cène de Léonard)",m:"Piazza di Santa Maria delle Grazie 2, Milano",a:"Piazza di Santa Maria delle Grazie 2",h:"Voir cenacolovinciano.org",note:"Réservation toujours obligatoire, même les jours gratuits ; les places partent très vite.",v:1},
+{n:"Museo del Novecento",m:"Via Marconi 1, Milano",a:"Via Marconi 1 (Piazza Duomo)",t:"02 88444061",tel:"+390288444061",h:"Environ 10h-19h30 (horaires de jour férié relevés) : à confirmer",v:1},
+{n:"Gallerie d'Italia",m:"Piazza della Scala 6, Milano",a:"Piazza della Scala 6",h:"Voir gallerieditalia.com",v:1},
+{n:"Museo Archeologico",t:"02 20404175",tel:"+390220404175",a:"Corso Magenta, Milano",h:"Voir comune.milano.it",v:1},
+{n:"GAM (Galleria d'Arte Moderna)",t:"02 88445943",tel:"+390288445943",a:"Via Palestro 16 (Villa Reale)",h:"Voir comune.milano.it",v:1},
+{n:"Teatro alla Scala",m:"Via Filodrammatici 2, Milano",a:"Via Filodrammatici 2",h:"Billets et tarifs : teatroallascala.org",note:"Vérifie les billets de dernière minute et le tarif étudiant sur le site officiel.",v:1}
+],notes:["Domenica al Museo : le 1er dimanche du mois, les musées d'État sont gratuits (Brera, Palazzo Citterio, Cenacolo : avec réservation) et les musées civiques aussi (Castello Sforzesco, collection permanente du Museo del Novecento, GAM, Museo di Storia Naturale, Acquario Civico, Museo Archeologico). Les horaires habituels s'appliquent.","D'après la presse locale : 2e mardi du mois gratuit pour les moins de 25 ans dans les musées civiques, et au Castello Sforzesco gratuité les 1er et 3e mardis dès 14h (info de 2024). Les tarifs civiques relevés étaient d'environ 10 € (Castello, Novecento, Storia Naturale) et 8 € (Acquario, GAM). Ces règles et prix changent : vérifie avant d'y aller.","Tarif réduit étudiant : à demander à la billetterie avec ta carte étudiante, la règle dépend du musée."]},
 {id:"div",i:"map-pin",t:"Transports et divers",l:[
 {n:"ATM (transports en commun)",t:"800 808 181",tel:"800808181",a:"atm.it",v:1},
 {n:"Objets trouvés (Ufficio Oggetti Rinvenuti)",m:"Via Friuli 30, Milano",a:"Via Friuli 30, Milano",h:"Voir comune.milano.it",v:1},
 {n:"Politecnico di Milano (campus Leonardo)",m:"Piazza Leonardo da Vinci 32, Milano",a:"Piazza Leonardo da Vinci 32",h:"Voir polimi.it",v:1}
-]}
+]},
+
+{id:"lnk",i:"arrow-top-right-on-square",t:"Liens utiles (réseau requis)",link:1,l:[
+["Polimi","https://www.polimi.it"],["ATM Milano (transports)","https://www.atm.it"],["Trenitalia","https://www.trenitalia.com"],["Italo","https://www.italotreno.it"],["Agenzia delle Entrate","https://www.agenziaentrate.gov.it"],["ameli (CEAM)","https://www.ameli.fr"],["Erasmus Student Network","https://esn.org"]
+],notes:["Liens recopiés tels quels : vérifie qu'ils sont toujours bons."]}
 ];
 let OPENV=new Set();
 function vieRow(x){
@@ -256,6 +258,7 @@ function vieRow(x){
  +(x.t?`<div class="d">${x.tel?`<a href="tel:${x.tel}">${esc(x.t)}</a>`:esc(x.t)}</div>`:'')
  +(x.h?`<div class="d">${esc(x.h)}</div>`:'')
  +(x.note?`<div class="d">${esc(x.note)}</div>`:'')+`</div>`}
+function linkRow(x){return `<a class="card tel" href="${x[1]}" target="_blank" rel="noopener"><span>${esc(x[0])}</span><span class="d">${ic('arrow-top-right-on-square',18)}</span></a>`}
 function wasteRow(x){
  return `<div class="card"><div class="t">${esc(x.n)} <span class="chip">${esc(x.c)}</span></div><div class="d">${esc(x.d)}</div><div class="d">Fréquence : ${esc(x.f)}</div></div>`}
 function vVie(){
@@ -263,7 +266,7 @@ function vVie(){
  VIE.forEach(g=>{
   const op=OPENV.has(g.id);
   h+=`<button class="btn s" style="text-align:left;margin-top:12px" data-a="vtoggle" data-id="${g.id}">${ic(g.i,18)} ${esc(g.t)}<span style="float:right;color:var(--mu)">${op?'−':'+'}</span></button>`;
-  if(op){h+=g.l.map(g.waste?wasteRow:vieRow).join('');
+  if(op){h+=g.l.map(g.waste?wasteRow:g.link?linkRow:vieRow).join('');
    if(g.notes)h+=g.notes.map(n=>`<p class="sub">${esc(n)}</p>`).join('')}});
  return h}
 function vSet(){
@@ -546,33 +549,15 @@ function initMap(){
  MAP.on('locationerror',()=>alert('Position indisponible. Vérifie l\'autorisation de localisation pour Safari / l\'app dans Réglages iOS.'));
  if(!curNet())fetchNet();
  setTimeout(()=>{if(MAP)MAP.invalidateSize()},250)}
-let dsub='docs';
-const CC=['Polimi','Santé','Logement','Administration','Banque','Famille / proches','Autre'];
-const LINKS=[['Polimi','https://www.polimi.it'],['ATM Milano (transports)','https://www.atm.it'],['Trenitalia','https://www.trenitalia.com'],['Italo','https://www.italotreno.it'],['Agenzia delle Entrate','https://www.agenziaentrate.gov.it'],['ameli (CEAM)','https://www.ameli.fr'],['Erasmus Student Network','https://esn.org']];
-function vAnn(){
- let h='<p class="sub">Contacts et liens. Tout reste sur ton iPhone. Saisis les numéros toi-même : je n\'ai pas de coordonnées vérifiées à te fournir.</p>';
- CC.forEach(c=>{const l=S.contacts.filter(x=>x.cat===c);if(!l.length)return;h+=`<h2>${esc(c)}</h2>`;
-  l.forEach(x=>{h+=`<div class="card row"><div class="grow"><div class="t">${esc(x.name)}</div>${x.note?`<div class="d">${esc(x.note)}</div>`:''}
-  ${x.tel?`<a class="chip" href="tel:${esc(x.tel.replace(/[^\d+]/g,''))}">${ic('phone',14)}${esc(x.tel)}</a>`:''}${x.mail?`<a class="chip" href="mailto:${esc(x.mail)}">${ic('envelope',14)}${esc(x.mail)}</a>`:''}${x.addr?`<a class="chip" href="https://maps.apple.com/?q=${encodeURIComponent(x.addr)}">${ic('map-pin',14)}${esc(x.addr)}</a>`:''}</div>
-  <button class="x" data-a="delct" data-id="${x.id}">${ic('x-mark',18)}</button></div>`})});
- if(!S.contacts.length)h+='<p class="sub">Aucun contact. Ajoute le bureau international, ton médecin, ton propriétaire, le consulat…</p>';
- h+=`<h2>Ajouter un contact</h2><div class="card"><input type="text" id="kn" placeholder="Nom (ex : Bureau international Polimi)">
- <select id="kc">${CC.map(c=>`<option>${esc(c)}</option>`).join('')}</select>
- <input type="text" id="kt" inputmode="tel" placeholder="Téléphone"><input type="text" id="km" inputmode="email" placeholder="E-mail">
- <input type="text" id="ka" placeholder="Adresse"><input type="text" id="ko" placeholder="Note (horaires, guichet…)">
- <button class="btn" data-a="addct">Ajouter</button></div>
- <h2>Liens utiles (réseau requis)</h2>`+LINKS.map(([n,u])=>`<a class="card tel" href="${u}" target="_blank" rel="noopener"><span>${esc(n)}</span><span class="d">${ic('arrow-top-right-on-square',18)}</span></a>`).join('')+'<p class="sub">Vérifie que ce sont bien les sites officiels actuels.</p>';
- return h}
-function vDocs(){return `<h1>${dsub==='ann'?'Contacts':'Coffre'}</h1><div class="seg"><button data-a="dsub" data-v="docs" class="${dsub==='docs'?'on':''}">Documents</button><button data-a="dsub" data-v="ann" class="${dsub==='ann'?'on':''}">Contacts</button></div>`+(dsub==='ann'?vAnn():vDocsList())}
 function backupBanner(){
- const has=S.docs.length||S.budget.exp.length||S.custom.length||S.contacts.length||Object.keys(S.tasks).length;if(!has)return'';
+ const has=S.budget.exp.length||S.custom.length||Object.keys(S.tasks).length;if(!has)return'';
  const n=S.lastExport?-diff(S.lastExport):null;
  if(n!==null&&n<=14)return'';
  return `<div class="card" style="border-color:var(--wa)"><div class="t" style="color:var(--wa)">${ic('exclamation-triangle',18)} Sauvegarde</div><div class="d">${n===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+n+' jours.'} iOS peut effacer les données locales.</div><button class="btn s" style="margin-top:8px" data-a="json">Exporter maintenant</button></div>`}
 function render(){
  const y=window.scrollY;if(MAP){saveView();MAP.remove();MAP=null;ME=null;ADD=false}
- document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet,map:vMap,vie:vVie}[tab]();document.getElementById('app').className=tab==='map'?'m':'';document.documentElement.classList.toggle('mapmode',tab==='map');
- document.getElementById('nav').innerHTML=[['today','home','Accueil'],['check','clipboard-document-check','Démarches'],['budget','banknotes','Budget'],['ital','language','Italien'],['map','map','Carte'],['vie','building-library','Pratique'],['docs','folder','Dossier'],['set','cog-6-tooth','Réglages']]
+ document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,set:vSet,map:vMap,vie:vVie}[tab]();document.getElementById('app').className=tab==='map'?'m':'';document.documentElement.classList.toggle('mapmode',tab==='map');
+ document.getElementById('nav').innerHTML=[['today','home','Accueil'],['check','clipboard-document-check','Démarches'],['budget','banknotes','Budget'],['ital','language','Italien'],['map','map','Carte'],['vie','building-library','Pratique'],['set','cog-6-tooth','Réglages']]
   .map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}">${ic(i,24)}${l}</button>`).join('');
  window.scrollTo(0,y);if(tab==='map')initMap()}
 async function outFile(name,text,mime){
@@ -600,9 +585,6 @@ document.addEventListener('click',e=>{
  if(a==='restoretask'){const o=Object.assign({},S.tasks[id]);delete o.hidden;S.tasks[id]=o;save();render();return}
  if(a==='deltask'){if(confirm('Supprimer cette démarche ?')){S.tasks[id]=Object.assign({},S.tasks[id],{hidden:true});save();render()}return}
  if(a==='delcustom'){S.custom=S.custom.filter(c=>c.id!==id);save();render();return}
- if(a==='adddoc'){const l=document.getElementById('dl').value.trim();if(!l){alert('Nom requis.');return}
-  S.docs.push({id:uid(),type:document.getElementById('dt').value,label:l,expiry:document.getElementById('de').value,loc:document.getElementById('dloc').value.trim()});save();render();return}
- if(a==='deldoc'){if(confirm('Supprimer ce document du coffre ?')){S.docs=S.docs.filter(d=>d.id!==id);save();render()}return}
  if(a==='mnav'){const[y,m]=bm.split('-').map(Number);const x=new Date(y,m-1+Number(b.dataset.v),1);bm=x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0');render();return}
  if(a==='addexp'){const am=num(document.getElementById('ea').value),d=document.getElementById('ed').value,n=Math.max(1,parseInt(document.getElementById('es').value)||1);
   if(!(am>0)||!d){alert('Montant et date requis.');return}
@@ -621,10 +603,6 @@ document.addEventListener('click',e=>{
  if(a==='msearch'){const e=document.getElementById('msearch');e.hidden=!e.hidden;document.getElementById('mfilt').hidden=true;if(!e.hidden)document.getElementById('sq').focus();return}
  if(a==='sgeo'){geoSearch();return}
  if(a==='sgo'){goTo(SRES[Number(id)]);return}
- if(a==='dsub'){dsub=b.dataset.v;render();return}
- if(a==='addct'){const nm=document.getElementById('kn').value.trim();if(!nm){alert('Nom requis.');return}
-  S.contacts.push({id:uid(),name:nm,cat:document.getElementById('kc').value,tel:document.getElementById('kt').value.trim(),mail:document.getElementById('km').value.trim(),addr:document.getElementById('ka').value.trim(),note:document.getElementById('ko').value.trim()});save();render();return}
- if(a==='delct'){if(confirm('Supprimer ce contact ?')){S.contacts=S.contacts.filter(x=>x.id!==id);save();render()}return}
  if(a==='ptoggle'){openP.has(id)?openP.delete(id):openP.add(id);document.getElementById('plist').innerHTML=plist();return}
  if(a==='fav'){const k=S.fav.indexOf(id);if(k>=0)S.fav.splice(k,1);else S.fav.push(id);save();document.getElementById('plist').innerHTML=plist();return}
  if(a==='say'){say(b.dataset.it);return}
