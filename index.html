@@ -56,7 +56,19 @@ label.l{display:block;font-size:13px;color:var(--mu);margin:0 0 3px}
 .mn{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
 .mn b{text-transform:capitalize}.mn .x{font-size:28px;padding:0 14px}
 a.chip{text-decoration:none}
-#map{height:calc(100dvh - 330px);min-height:300px;border-radius:14px;border:1px solid var(--bd);margin:0 0 8px;z-index:0}
+#app.m{padding-top:calc(env(safe-area-inset-top) + 6px);padding-bottom:calc(env(safe-area-inset-bottom) + 70px)}
+#mapwrap{position:relative}
+#map{height:calc(100dvh - 118px - env(safe-area-inset-top) - env(safe-area-inset-bottom));min-height:300px;border-radius:14px;border:1px solid var(--bd);z-index:0}
+#mlines{position:absolute;top:8px;left:8px;z-index:900;display:flex;gap:4px}
+.lc{height:24px;padding:0 9px;font-size:11px;font-weight:700;border-radius:99px;border:1px solid var(--bd);background:var(--card);color:var(--mu);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+#mtools{position:absolute;top:8px;right:8px;z-index:900;display:flex;flex-direction:column;gap:8px}
+.mb{width:42px;height:42px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.mb.on{color:#1a73e8}
+#mcross{position:absolute;left:50%;top:50%;transform:translate(-50%,-92%);z-index:900;pointer-events:none;color:var(--er)}
+#mbar{position:absolute;left:8px;right:8px;bottom:22px;z-index:900;display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:8px 10px;box-shadow:0 1px 6px rgba(0,0,0,.3);font-size:13px}
+#mbar span{flex:1}
+#mbar .btn{width:auto;margin:0;padding:8px 14px}
+#mcross[hidden],#mbar[hidden]{display:none}
 .pin{font-size:22px;line-height:26px;text-align:center;background:none;border:0}
 .leaflet-popup-content{color:#222}.leaflet-popup-content a{color:#1f7a4d}
 .seg{display:flex;gap:6px;margin:0 0 12px}
@@ -355,7 +367,7 @@ function popupFor(title,sub,lat,lon,extraBtn){const d=document.createElement('di
  d.appendChild(routeLink(lat,lon));if(extraBtn){d.appendChild(document.createElement('br'));d.appendChild(extraBtn)}return d}
 function drawNet(){
  if(!MAP||!NETL)return;NETL.clearLayers();SM=[];const n=curNet();if(!n)return;
- n.lines.forEach(l=>{if(HID[l.ref])return;L.polyline(l.paths,{color:l.col,weight:5,opacity:.85}).addTo(NETL)});
+ n.lines.forEach(l=>{if(HID[l.ref])return;L.polyline(l.paths,{color:l.col,weight:4,opacity:.85,interactive:false}).addTo(NETL)});
  n.stations.forEach(s=>{
   if(s.refs.length&&s.refs.every(r=>HID[r]))return;
   const c=s.refs.length?(LCOL[s.refs.find(r=>!HID[r])]||'#555'):'#555';
@@ -372,24 +384,29 @@ function drawPlaces(){
  S.places.forEach(p=>{const del=mkBtn('Supprimer ce lieu','btn r',()=>{if(confirm('Supprimer « '+p.name+' » ?')){S.places=S.places.filter(x=>x.id!==p.id);save();MAP.closePopup();drawPlaces()}});
   L.marker([p.lat,p.lon],{icon:pin('📍')}).addTo(PLACEL).bindPopup(popupFor(p.name,'',p.lat,p.lon,del))})}
 function updateLines(){const el=document.getElementById('mlines');if(!el)return;const n=curNet();
- el.innerHTML=n?n.lines.map(l=>`<button data-a="mline" data-v="${l.ref}" class="${HID[l.ref]?'':'on'}" style="${HID[l.ref]?'':'background:'+l.col+';border-color:'+l.col+';color:'+(l.ref==='M3'?'#000':'#fff')}">${l.ref}</button>`).join(''):''}
+ el.innerHTML=n?n.lines.map(l=>`<button data-a="mline" data-v="${l.ref}" class="lc" style="${HID[l.ref]?'':'background:'+l.col+';border-color:'+l.col+';color:'+(l.ref==='M3'?'#000':'#fff')}">${l.ref}</button>`).join(''):''}
+let ADD=false;
+function endAdd(){ADD=false;['mcross','mbar'].forEach(i=>{const e=document.getElementById(i);if(e)e.hidden=true})}
+const IC={
+ loc:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
+ add:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.6-6-10a6 6 0 1 1 12 0c0 4.4-6 10-6 10z"/><path d="M12 8.5v5M9.5 11h5"/></svg>',
+ ref:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>',
+ pin:'<svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" stroke="#fff" stroke-width="1"><path d="M12 22s-7-6.2-7-12a7 7 0 1 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="10" r="2.5" fill="#fff" stroke="none"/></svg>'};
 function vMap(){
- return `<h1>Carte</h1><p class="sub" id="mst">${esc(statusText())}</p><div class="seg" id="mlines"></div>
- <div class="seg"><button data-a="mlocate">📍 Me localiser</button><button data-a="mrefresh">↻ Réseau</button></div>
- <div id="map"></div><p class="sub">Touche la carte pour ajouter un lieu. Les tuiles de carte viennent d'OpenStreetMap (réseau requis, seules les zones déjà vues sont mises en cache). Le tracé du réseau est gardé hors ligne une fois chargé.</p>`}
+ return `<div id="mapwrap"><div id="map"></div><div id="mlines"></div>
+ <div id="mtools"><button class="mb" data-a="mlocate" aria-label="Me localiser">${IC.loc}</button><button class="mb" data-a="madd" aria-label="Ajouter un lieu">${IC.add}</button><button class="mb" data-a="mrefresh" aria-label="Recharger le réseau">${IC.ref}</button></div>
+ <div id="mcross" hidden>${IC.pin}</div>
+ <div id="mbar" hidden><span>Place le repère, puis valide</span><button class="btn s" data-a="mcancel">Annuler</button><button class="btn" data-a="mok">Valider</button></div></div>
+ <p class="sub" id="mst" style="margin:6px 2px 0;font-size:12px">${esc(statusText())}</p>`}
 function saveView(){if(MAP){const c=MAP.getCenter();MVIEW={c:[c.lat,c.lng],z:MAP.getZoom()}}}
 function initMap(){
  const el=document.getElementById('map');if(!el)return;
  if(!window.L){el.innerHTML='<p class="sub" style="padding:12px">Leaflet non chargé (fichier leaflet.js manquant ?).</p>';return}
- MAP=L.map(el).setView(MVIEW?MVIEW.c:[45.4642,9.19],MVIEW?MVIEW.z:12);
+ MAP=L.map(el,{zoomControl:false,renderer:L.canvas({tolerance:10})}).setView(MVIEW?MVIEW.c:[45.4642,9.19],MVIEW?MVIEW.z:12);
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true,attribution:'© OpenStreetMap'}).addTo(MAP);
  NETL=L.layerGroup().addTo(MAP);PLACEL=L.layerGroup().addTo(MAP);
  updateLines();drawNet();drawPlaces();
  MAP.on('zoomend',restyleStations);
- MAP.on('click',ev=>{const d=document.createElement('div');
-  d.appendChild(mkBtn('➕ Ajouter un lieu ici','btn',()=>{const nm=(prompt('Nom du lieu ?')||'').trim();if(!nm)return;
-   S.places.push({id:uid(),name:nm,lat:Math.round(ev.latlng.lat*1e5)/1e5,lon:Math.round(ev.latlng.lng*1e5)/1e5});save();MAP.closePopup();drawPlaces()}));
-  L.popup().setLatLng(ev.latlng).setContent(d).openOn(MAP)});
  MAP.on('locationfound',ev=>{if(ME)ME.remove();ME=L.circleMarker(ev.latlng,{radius:8,color:'#fff',weight:3,fillColor:'#1a73e8',fillOpacity:1}).addTo(MAP)});
  MAP.on('locationerror',()=>alert('Position indisponible. Vérifie l\'autorisation de localisation pour Safari / l\'app dans Réglages iOS.'));
  if(!curNet())fetchNet();
@@ -418,8 +435,8 @@ function backupBanner(){
  if(n!==null&&n<=14)return'';
  return `<div class="card" style="border-color:var(--wa)"><div class="t">⚠️ Sauvegarde</div><div class="d">${n===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+n+' jours.'} iOS peut effacer les données locales.</div><button class="btn s" style="margin-top:8px" data-a="json">Exporter maintenant</button></div>`}
 function render(){
- const y=window.scrollY;if(MAP){saveView();MAP.remove();MAP=null;ME=null}
- document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet,map:vMap}[tab]();
+ const y=window.scrollY;if(MAP){saveView();MAP.remove();MAP=null;ME=null;ADD=false}
+ document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet,map:vMap}[tab]();document.getElementById('app').className=tab==='map'?'m':'';
  document.getElementById('nav').innerHTML=[['today','🗓','Accueil'],['check','✅','Démarches'],['budget','💶','Budget'],['ital','🇮🇹','Italien'],['map','🗺','Carte'],['docs','🗂','Dossier'],['set','⚙️','Réglages']]
   .map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><span>${i}</span>${l}</button>`).join('');
  window.scrollTo(0,y);if(tab==='map')initMap()}
@@ -451,6 +468,10 @@ document.addEventListener('click',e=>{
   if(!(am>0)||!d){alert('Montant et date requis.');return}
   S.budget.exp.push({id:uid(),date:d,amount:Math.round(am*100)/100,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),n,reimb:false});save();bm=d.slice(0,7);render();return}
  if(a==='delexp'){if(confirm('Supprimer cette dépense ?')){S.budget.exp=S.budget.exp.filter(x=>x.id!==id);save();render()}return}
+ if(a==='madd'){if(!MAP)return;ADD=true;MAP.closePopup();document.getElementById('mcross').hidden=false;document.getElementById('mbar').hidden=false;return}
+ if(a==='mcancel'){endAdd();return}
+ if(a==='mok'){if(!MAP)return;const c=MAP.getCenter(),nm=(prompt('Nom du lieu ?')||'').trim();if(!nm)return;
+  S.places.push({id:uid(),name:nm,lat:Math.round(c.lat*1e5)/1e5,lon:Math.round(c.lng*1e5)/1e5});save();endAdd();drawPlaces();return}
  if(a==='mline'){const r=b.dataset.v;HID[r]=!HID[r];updateLines();drawNet();return}
  if(a==='mlocate'){if(MAP)MAP.locate({setView:true,maxZoom:16});return}
  if(a==='mrefresh'){if(confirm('Recharger le réseau depuis OpenStreetMap ?'))fetchNet();return}
