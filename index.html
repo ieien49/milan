@@ -354,13 +354,17 @@ function popupFor(title,sub,lat,lon,extraBtn){const d=document.createElement('di
  if(sub){const s=document.createElement('div');s.textContent=sub;s.style.margin='2px 0';d.appendChild(s)}
  d.appendChild(routeLink(lat,lon));if(extraBtn){d.appendChild(document.createElement('br'));d.appendChild(extraBtn)}return d}
 function drawNet(){
- if(!MAP||!NETL)return;NETL.clearLayers();const n=curNet();if(!n)return;
+ if(!MAP||!NETL)return;NETL.clearLayers();SM=[];const n=curNet();if(!n)return;
  n.lines.forEach(l=>{if(HID[l.ref])return;L.polyline(l.paths,{color:l.col,weight:5,opacity:.85}).addTo(NETL)});
  n.stations.forEach(s=>{
   if(s.refs.length&&s.refs.every(r=>HID[r]))return;
   const c=s.refs.length?(LCOL[s.refs.find(r=>!HID[r])]||'#555'):'#555';
-  const m=L.circleMarker([s.lat,s.lon],{radius:6,color:c,weight:3,fillColor:'#fff',fillOpacity:1}).addTo(NETL);
-  m.bindPopup(popupFor(s.name,s.refs.join(' · '),s.lat,s.lon))})}
+  const st=stStyle(MAP.getZoom());
+  const m=L.circleMarker([s.lat,s.lon],{radius:st.r,color:c,weight:st.w,fillColor:'#fff',fillOpacity:1}).addTo(NETL);
+  m.bindPopup(popupFor(s.name,s.refs.join(' · '),s.lat,s.lon));SM.push(m)})}
+let SM=[];
+function stStyle(z){return z<=11?{r:2,w:1.5}:z===12?{r:3,w:2}:z===13?{r:4,w:2.5}:z===14?{r:5,w:3}:{r:6,w:3}}
+function restyleStations(){if(!MAP)return;const st=stStyle(MAP.getZoom());SM.forEach(m=>m.setStyle({weight:st.w}).setRadius(st.r))}
 function drawPlaces(){
  if(!MAP||!PLACEL)return;PLACEL.clearLayers();
  const pin=e=>L.divIcon({html:e,className:'pin',iconSize:[26,26],iconAnchor:[13,22],popupAnchor:[0,-18]});
@@ -381,6 +385,7 @@ function initMap(){
  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true,attribution:'© OpenStreetMap'}).addTo(MAP);
  NETL=L.layerGroup().addTo(MAP);PLACEL=L.layerGroup().addTo(MAP);
  updateLines();drawNet();drawPlaces();
+ MAP.on('zoomend',restyleStations);
  MAP.on('click',ev=>{const d=document.createElement('div');
   d.appendChild(mkBtn('➕ Ajouter un lieu ici','btn',()=>{const nm=(prompt('Nom du lieu ?')||'').trim();if(!nm)return;
    S.places.push({id:uid(),name:nm,lat:Math.round(ev.latlng.lat*1e5)/1e5,lon:Math.round(ev.latlng.lng*1e5)/1e5});save();MAP.closePopup();drawPlaces()}));
