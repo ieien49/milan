@@ -208,6 +208,55 @@ function vDocsList(){
  <input type="text" id="dl" placeholder="Nom (ex : CNI)"><label class="l">Date d'expiration (optionnel)</label><input type="date" id="de">
  <input type="text" id="dloc" placeholder="Emplacement (ex : Fichiers > Italie > CNI.pdf)"><button class="btn" data-a="adddoc">Ajouter</button></div>`;
  return h}
+
+const VIE=[
+{id:"adm",i:"building-library",t:"Administration",l:[
+{n:"Comune di Milano (call center)",t:"02 02 02",tel:"020202",a:"Anagrafe : bureaux décentralisés par Municipio, rendez-vous en ligne",h:"Voir comune.milano.it",v:1},
+{n:"Questura di Milano (siège, URP)",m:"Via Fatebenefratelli 11, 20121 Milano",a:"Via Fatebenefratelli 11, 20121 Milano",t:"02 62261",tel:"+390262261",h:"URP : lun-ven 8h-14h et 15h-18h",note:"Ce n'est pas le bureau des permis de séjour : l'Ufficio Immigrazione est à Via Montebello 26, Via Cagni 21 ou Viale Certosa 7 (02 3267121), selon ta convocation. Rendez-vous : prenotafacile.poliziadistato.it. Citoyen UE : en principe pas de permis de séjour, l'inscription se fait au Comune (anagrafe).",v:1},
+{n:"Poste Italiane",t:"803 160",tel:"803160",a:"Bureau le plus proche : poste-italiane.it",h:"Horaires variables selon le bureau",v:1},
+{n:"Agenzia delle Entrate (codice fiscale)",t:"800 90 96 96",tel:"800909696",a:"Bureau sur rendez-vous : agenziaentrate.gov.it",h:"Voir le site",note:"C'est l'Agenzia delle Entrate qui délivre le codice fiscale, pas le CAF.",v:1},
+{n:"CAF (centre d'aide fiscale)",a:"Plusieurs réseaux (CAF CISL, ACLI, etc.), adresse selon le bureau",h:"Souvent sur rendez-vous",note:"Aide pour déclaration de revenus (730), ISEE, aides. Ne délivre pas le codice fiscale.",v:1},
+{n:"INPS",t:"803 164 (fixe) · 06 164 164 (mobile)",tel:"803164",a:"Sede de Milano : voir inps.it",h:"Voir le site",note:"Retraites et prestations sociales. Pour l'assurance maladie (médecin traitant, tessera sanitaria), voir ATS Milano / ASST de ton quartier.",v:1}
+]},
+{id:"san",i:"heart",t:"Santé et pharmacies de garde",l:[
+{n:"Urgences (numéro unique)",t:"112",tel:"112",h:"24h/24"},
+{n:"Assistance médicale non urgente (ex-guardia medica)",t:"116117",tel:"116117",h:"Chaque soir 20h-8h ; 24h/24 les jours fériés et veilles (Lombardie)",v:1},
+{n:"Pronto Farmacia (quelle pharmacie est ouverte ?)",t:"800 801 185",tel:"800801185",h:"24h/24, 7j/7",note:"Carte en temps réel : Farmacia Aperta (Regione Lombardia, web/app). La nuit (20h-8h30), les pharmacies de garde servent parfois « à battants fermés » : sonner.",v:1},
+{n:"Farmacia Ambreck (24h/24)",m:"Via Stradivari 1, Milano",a:"Via Stradivari 1 (P.le Argentina)",t:"02 29526966",tel:"+390229526966",h:"24h/24, 7j/7",v:1},
+{n:"Farmacia Boccaccio (24h/24)",m:"Via Boccaccio 26, Milano",a:"Via Boccaccio 26 (Cadorna)",t:"02 4695281",tel:"+39024695281",h:"24h/24, 7j/7",v:1},
+{n:"Farmacia Stazione Centrale",m:"Piazza Duca d'Aosta 1, Milano",a:"Stazione Centrale / Piazza Duca d'Aosta 1",t:"02 669 0735",tel:"+390266690735",h:"Environ 8h-20h, pas 24h/24",note:"Un autre numéro circule (02 6690935) : vérifie avant d'appeler.",v:1}
+]},
+{id:"dech",i:"home-modern",t:"Tri des déchets (AMSA)",waste:1,l:[
+{n:"Organico (umido)",c:"Bac ou seau marron",d:"Restes de nourriture, coquilles, marc de café, filtres de thé, serviettes en papier usagées",f:"Selon la zone"},
+{n:"Carta e cartone",c:"Bac blanc",d:"Journaux, cartons aplatis, papier, briques de boisson",f:"Selon la zone"},
+{n:"Vetro",c:"Bac vert",d:"Bouteilles, pots, bocaux. Pas la céramique ni la vaisselle cassée (→ indifferenziato)",f:"Selon la zone"},
+{n:"Plastica e metalli",c:"Sac jaune transparent",d:"Bouteilles PET, flacons, emballages plastique, canettes, boîtes, aluminium. Plastique et métal vont ensemble à Milan",f:"Selon la zone"},
+{n:"Indifferenziato",c:"Sac transparent neutre",d:"Non recyclable : couches, céramique, papier sale ou gras, mégots, tickets de caisse",f:"Selon la zone"}
+],notes:["Les couleurs et la fréquence dépendent de la zone et de l'immeuble. Vérifie sur amsa.it (calendrier par adresse) avant d'agir.","Dans beaucoup d'immeubles, les bacs sont dans la cour : demande à ton propriétaire ou au gestionnaire. Je n'ai pas confirmé que les « isole ecologiche » existent partout à Milan.","Encombrants : collecte à domicile sur rendez-vous, et Centro Ambientale Mobile mensuel dans les quartiers (infos AMSA, Via Olgettina 25) : à vérifier sur amsa.it."]},
+{id:"div",i:"map-pin",t:"Transports et divers",l:[
+{n:"ATM (transports en commun)",t:"800 808 181",tel:"800808181",a:"atm.it",v:1},
+{n:"Objets trouvés (Ufficio Oggetti Rinvenuti)",m:"Via Friuli 30, Milano",a:"Via Friuli 30, Milano",h:"Voir comune.milano.it",v:1},
+{n:"Politecnico di Milano (campus Leonardo)",m:"Piazza Leonardo da Vinci 32, Milano",a:"Piazza Leonardo da Vinci 32",h:"Voir polimi.it",v:1}
+]}
+];
+let OPENV=new Set();
+function vieRow(x){
+ const ad=x.m?`<a href="https://maps.apple.com/?q=${encodeURIComponent(x.m)}" target="_blank" rel="noopener">${esc(x.a)}</a>`:esc(x.a||'');
+ return `<div class="card"><div class="t">${esc(x.n)}${x.v?' <span class="chip w">à vérifier</span>':''}</div>`
+ +(x.a?`<div class="d">${ad}</div>`:'')
+ +(x.t?`<div class="d">${x.tel?`<a href="tel:${x.tel}">${esc(x.t)}</a>`:esc(x.t)}</div>`:'')
+ +(x.h?`<div class="d">${esc(x.h)}</div>`:'')
+ +(x.note?`<div class="d">${esc(x.note)}</div>`:'')+`</div>`}
+function wasteRow(x){
+ return `<div class="card"><div class="t">${esc(x.n)} <span class="chip">${esc(x.c)}</span></div><div class="d">${esc(x.d)}</div><div class="d">Fréquence : ${esc(x.f)}</div></div>`}
+function vVie(){
+ let h='<h1>Vie pratique</h1><p class="sub">Numéros et adresses utiles à Milan. « À vérifier » = je n\'ai pas pu confirmer les horaires ou le numéro à jour : vérifie avant d\'agir.</p>';
+ VIE.forEach(g=>{
+  const op=OPENV.has(g.id);
+  h+=`<button class="btn s" style="text-align:left;margin-top:12px" data-a="vtoggle" data-id="${g.id}">${ic(g.i,18)} ${esc(g.t)}<span style="float:right;color:var(--mu)">${op?'−':'+'}</span></button>`;
+  if(op){h+=g.l.map(g.waste?wasteRow:vieRow).join('');
+   if(g.notes)h+=g.notes.map(n=>`<p class="sub">${esc(n)}</p>`).join('')}});
+ return h}
 function vSet(){
  let h=`<h1>Réglages</h1><h2>Dates</h2><div class="card"><label class="l">Arrivée à Milan</label><input type="date" data-c="set" data-f="arrival" value="${S.settings.arrival||''}">
  <label class="l">Fin du semestre / départ</label><input type="date" data-c="set" data-f="departure" value="${S.settings.departure||''}"></div>
@@ -513,8 +562,8 @@ function backupBanner(){
  return `<div class="card" style="border-color:var(--wa)"><div class="t" style="color:var(--wa)">${ic('exclamation-triangle',18)} Sauvegarde</div><div class="d">${n===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+n+' jours.'} iOS peut effacer les données locales.</div><button class="btn s" style="margin-top:8px" data-a="json">Exporter maintenant</button></div>`}
 function render(){
  const y=window.scrollY;if(MAP){saveView();MAP.remove();MAP=null;ME=null;ADD=false}
- document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet,map:vMap}[tab]();document.getElementById('app').className=tab==='map'?'m':'';document.documentElement.classList.toggle('mapmode',tab==='map');
- document.getElementById('nav').innerHTML=[['today','home','Accueil'],['check','clipboard-document-check','Démarches'],['budget','banknotes','Budget'],['ital','language','Italien'],['map','map','Carte'],['docs','folder','Dossier'],['set','cog-6-tooth','Réglages']]
+ document.getElementById('app').innerHTML={today:vToday,check:vCheck,budget:vBudget,ital:vItal,docs:vDocs,set:vSet,map:vMap,vie:vVie}[tab]();document.getElementById('app').className=tab==='map'?'m':'';document.documentElement.classList.toggle('mapmode',tab==='map');
+ document.getElementById('nav').innerHTML=[['today','home','Accueil'],['check','clipboard-document-check','Démarches'],['budget','banknotes','Budget'],['ital','language','Italien'],['map','map','Carte'],['vie','building-library','Pratique'],['docs','folder','Dossier'],['set','cog-6-tooth','Réglages']]
   .map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}">${ic(i,24)}${l}</button>`).join('');
  window.scrollTo(0,y);if(tab==='map')initMap()}
 async function outFile(name,text,mime){
@@ -536,6 +585,7 @@ document.addEventListener('click',e=>{
  if(a==='toggle')return; // géré par change
  if(a==='addcustom'){const t=document.getElementById('ct').value.trim(),d=document.getElementById('cd').value;
   if(!t){alert('Titre requis.');return}S.custom.push({id:uid(),title:t,due:d,done:false});save();render();return}
+ if(a==='vtoggle'){if(OPENV.has(id))OPENV.delete(id);else OPENV.add(id);render();return}
  if(a==='phtoggle'){if(OPENPH.has(id))OPENPH.delete(id);else OPENPH.add(id);render();return}
  if(a==='showhid'){SHOWHID=!SHOWHID;render();return}
  if(a==='restoretask'){const o=Object.assign({},S.tasks[id]);delete o.hidden;S.tasks[id]=o;save();render();return}
